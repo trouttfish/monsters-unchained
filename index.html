@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monsters Unchained Rotation Creator V1</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#222;--border:#2e2e2e;--accent:#f0c040;--accent2:#e05a2b;--text:#f0ede8;--text-dim:#777;--green:#4caf7d;--red:#e05a2b;--blue:#5b8dee;--purple:#9b6dff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{background:var(--surface);border-bottom:2px solid var(--accent);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+header h1{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;color:var(--accent)}
+header span{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase}
+.app{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 61px)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:18px 12px;overflow-y:auto;max-height:calc(100vh - 61px);position:sticky;top:61px}
+.sidebar-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.position-chip{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:5px 8px;margin-bottom:3px;font-size:.7rem;font-family:'DM Mono',monospace;transition:opacity .2s}
+.position-chip.used{opacity:.25;border-color:transparent}
+.spatial-num{font-size:.56rem;color:var(--text-dim);background:var(--bg);padding:1px 4px;border-radius:2px}
+.opt-badge{font-size:.5rem;padding:1px 4px;border-radius:2px;background:rgba(155,109,255,.2);color:var(--purple);text-transform:uppercase;letter-spacing:1px}
+.main{padding:24px 28px;overflow-y:auto}
+.generate-area{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.generate-area p{font-size:.8rem;color:var(--text-dim);line-height:1.6;max-width:480px}
+.generate-area p strong{color:var(--text)}
+.btn-group{display:flex;gap:10px;align-items:center}
+.btn{font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;padding:9px 16px;border-radius:4px;border:none;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#000;font-weight:500}
+.btn-primary:hover{background:#f5d060;transform:translateY(-1px)}
+.btn-secondary{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--text-dim);color:var(--text)}
+.status-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.status-item{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;display:flex;flex-direction:column;gap:2px}
+.status-item .label{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim)}
+.status-item .value{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1px;color:var(--accent)}
+.history-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:18px;font-family:'DM Mono',monospace;font-size:.66rem;color:var(--text-dim)}
+.history-bar strong{color:var(--text);display:block;margin-bottom:6px;font-size:.58rem;letter-spacing:2px;text-transform:uppercase}
+.history-entry{display:flex;align-items:flex-start;gap:8px;color:#444;font-size:.6rem;margin-bottom:3px}
+.history-entry .gen-num{color:var(--accent2);font-size:.58rem;flex-shrink:0}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.66rem;color:var(--text-dim);font-family:'DM Mono',monospace}
+.legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.section-divider{display:flex;align-items:center;gap:12px;margin:22px 0 14px}
+.section-divider span{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:3px;color:var(--text-dim);white-space:nowrap}
+.section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.rotations-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.rotation-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .2s}
+.rotation-card:hover{border-color:#444}
+.rotation-card.special{border-color:var(--purple)}
+.rotation-card.rcs-rss{border-color:var(--accent2)}
+.rotation-card.greeter{border-color:var(--green)}
+.rotation-card.dispatch{border-color:var(--blue)}
+.rotation-header{padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.rotation-title{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:2px}
+.rotation-size{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--text-dim);background:var(--bg);padding:2px 5px;border-radius:3px}
+.rotation-badge{font-family:'DM Mono',monospace;font-size:.56rem;padding:2px 5px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
+.badge-special{background:var(--purple);color:#fff}
+.badge-rcs{background:var(--accent2);color:#fff}
+.badge-greeter{background:var(--green);color:#000}
+.badge-dispatch{background:var(--blue);color:#fff}
+.badge-overflow{background:var(--border);color:var(--text-dim)}
+.rotation-slots{padding:9px;display:flex;flex-direction:column;gap:4px}
+.slot{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);min-height:32px}
+.slot.anchor{border-color:var(--accent2);background:rgba(224,90,43,.08)}
+.slot.endcap-greeter{border-color:var(--green);background:rgba(76,175,125,.08)}
+.slot.endcap-dispatch{border-color:var(--blue);background:rgba(91,141,238,.08)}
+.slot.is-optional{border-style:dashed}
+.slot-number{font-family:'DM Mono',monospace;font-size:.56rem;color:var(--text-dim);width:13px;flex-shrink:0}
+.slot-name{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--text);flex:1}
+.slot-spatial{font-size:.54rem;color:var(--text-dim);background:var(--bg);padding:1px 3px;border-radius:2px;font-family:'DM Mono',monospace;flex-shrink:0}
+.slot-tag{font-size:.5rem;padding:1px 4px;border-radius:2px;font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;flex-shrink:0}
+.tag-anchor{background:rgba(224,90,43,.2);color:var(--accent2)}
+.tag-greeter{background:rgba(76,175,125,.2);color:var(--green)}
+.tag-dispatch{background:rgba(91,141,238,.2);color:var(--blue)}
+.tag-optional{background:rgba(155,109,255,.2);color:var(--purple)}
+.tag-fixed{background:rgba(240,192,64,.15);color:var(--accent)}
+.arrow{text-align:center;color:#2a2a2a;font-size:.62rem;line-height:1;margin:-1px 0}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-dim)}
+.empty-state .icon{font-size:2.5rem;margin-bottom:14px;opacity:.2}
+.empty-state p{font-size:.8rem;line-height:1.7}
+.alert{padding:10px 14px;border-radius:5px;font-size:.76rem;margin-bottom:14px;border-left:3px solid;display:none;font-family:'DM Mono',monospace}
+.alert.show{display:block}
+.alert.warn{background:rgba(240,192,64,.1);border-color:var(--accent);color:var(--accent)}
+.alert.error{background:rgba(224,90,43,.1);border-color:var(--red);color:var(--red)}
+.alert.success{background:rgba(76,175,125,.1);border-color:var(--green);color:var(--green)}
+.dispatch-options{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 22px;margin-bottom:16px}
+.dispatch-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px}
+.dispatch-checks{display:flex;gap:24px;flex-wrap:wrap}
+.dispatch-check{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:.72rem;color:var(--text);cursor:pointer}
+.dispatch-check input{accent-color:var(--blue);width:14px;height:14px;cursor:pointer}
+.alert.success{background:rgba(76,175,125,.1);border-color:var(--green);color:var(--green)}
+.dispatch-options{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 22px;margin-bottom:16px}
+.dispatch-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px}
+.dispatch-checks{display:flex;gap:24px;flex-wrap:wrap}
+.dispatch-check{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:.72rem;color:var(--text);cursor:pointer}
+.dispatch-check input{accent-color:var(--blue);width:14px;height:14px;cursor:pointer}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Monsters Unchained</h1>
+  <span>Rotation Creator V1</span>
+</header>
+<div class="app">
+  <aside class="sidebar">
+    <div style="margin-bottom:20px">
+      <div class="sidebar-label">Position Pool</div>
+      <div id="position-pool"></div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="generate-area">
+      <p><strong>Sunday Rotation Builder.</strong> Generates this week's rotations following all spatial, family, proximity, and sizing rules. History tracks the last 8 generations to prevent repeat boards. <em>Created by Alex Troutt.</em></p>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="clearHistory()">Clear History</button>
+        <button class="btn btn-secondary" onclick="resetRotations()">Reset</button>
+        <button class="btn btn-primary" onclick="generateRotations()">&#9654; Generate</button>
+      </div>
+    </div>
+    <div class="dispatch-options">
+      <div class="dispatch-label">Dispatch Endcap Options</div>
+      <div class="dispatch-checks">
+        <label class="dispatch-check">
+          <input type="checkbox" id="rcs-dispatch"> Include DISPATCH at end of RCS rotation
+        </label>
+        <label class="dispatch-check">
+          <input type="checkbox" id="rss-dispatch"> Include DISPATCH at end of RSS rotation
+        </label>
+      </div>
+    </div>
+    <div class="alert" id="alert"></div>
+    <div class="history-bar">
+      <strong>Generation History (last 8)</strong>
+      <div id="history-entries"><span style="color:#333;font-size:.6rem">No generations yet.</span></div>
+    </div>
+    <div class="status-bar" id="status-bar" style="display:none">
+      <div class="status-item"><span class="label">Total Rotations</span><span class="value" id="stat-total">0</span></div>
+      <div class="status-item"><span class="label">4-Spot</span><span class="value" id="stat-four">0</span></div>
+      <div class="status-item"><span class="label">3-Spot</span><span class="value" id="stat-three">0</span></div>
+      <div class="status-item"><span class="label">Positions Placed</span><span class="value" id="stat-placed">0</span></div>
+      <div class="status-item"><span class="label">Generation #</span><span class="value" id="stat-gen">—</span></div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>RCS/RSS Anchor</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Greeter Endcap</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Dispatch Endcap</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Fixed Special</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--border);border:1px dashed #555"></div>Optional</div>
+    </div>
+    <div id="rotations-output">
+      <div class="empty-state">
+        <div class="icon">⬡</div>
+        <p>No rotations generated yet.<br>Click <strong>Generate</strong> to build this week's board.</p>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const POSITIONS=[
+  {id:'RCS',spatial:null,family:'rcs-rss',required:true},
+  {id:'RSS',spatial:null,family:'rcs-rss',required:true},
+  {id:'GREETER 1',spatial:1,family:'greeter',required:true,endcap:'greeter'},
+  {id:'GREETER 2',spatial:2,family:'greeter',required:true,endcap:'greeter'},
+  {id:'GREETER TEST SEAT',spatial:3,family:'greeter',required:true,endcap:'greeter'},
+  {id:'SINGLES LOCKERS',spatial:4,family:null,required:false,cluster:'front-room'},
+  {id:'VALIDATION',spatial:5,family:null,required:true,cluster:'front-room'},
+  {id:'STAIRCASE ROAMER',spatial:6,family:null,required:false,cluster:'front-room'},
+  {id:'REDEMPTION',spatial:7,family:null,required:true},
+  {id:'MERGE',spatial:8,family:'merge',required:false},
+  {id:'PRESHOW LOAD',spatial:9,family:'merge',required:true},
+  {id:'PRESHOW',spatial:10,family:null,required:true},
+  {id:'LOCKER LOAD 1',spatial:11,family:'locker',required:true},
+  {id:'LOCKER LOAD 2',spatial:12,family:'locker',required:true},
+  {id:'QC 1',spatial:13,family:'qc',required:true},
+  {id:'QC 2',spatial:14,family:'qc',required:true},
+  {id:'SECONDARY RUNNER',spatial:15,family:'qc',required:true},
+  {id:'PULSE',spatial:16,family:'qc',required:false},
+  {id:'SECONDARY',spatial:17,family:null,required:true,cluster:'turntable',greeterOnly:true},
+  {id:'GROUPER',spatial:20,family:null,required:true,cluster:'turntable'},
+  {id:'LOAD',spatial:21,family:null,required:true,cluster:'turntable'},
+  {id:'TURNTABLE ASSIST',spatial:22,family:null,required:true,cluster:'turntable'},
+  {id:'DISPATCH 1',spatial:23,family:'dispatch',required:true,endcap:'dispatch',cluster:'turntable'},
+  {id:'DISPATCH 2',spatial:24,family:'dispatch',required:true,endcap:'dispatch',cluster:'turntable'},
+  {id:'DISPATCH 3',spatial:25,family:'dispatch',required:true,endcap:'dispatch',cluster:'turntable'},
+  {id:'SPOTTER',spatial:26,family:null,required:true,cluster:'turntable'},
+  {id:'UNLOAD',spatial:27,family:'unload',required:true,cluster:'turntable'},
+  {id:'UNLOAD 2',spatial:28,family:'unload',required:true,optional:true,cluster:'turntable'},
+  {id:'LOCKER UNLOAD 1',spatial:18,family:'locker',required:true},
+  {id:'LOCKER UNLOAD 2',spatial:19,family:'locker',required:true},
+  {id:'YGOR',spatial:null,family:'ygor',required:true,special:true},
+  {id:'FRITZ',spatial:null,family:'ygor',required:false,special:true},
+  {id:'ESCORT',spatial:null,family:'ygor',required:false,special:true},
+  {id:'REGULATORY',spatial:null,family:'ygor',required:false,special:true},
+  {id:'ELEVATOR',spatial:null,family:'ygor',required:false,special:true}
+];
+
+const SPECIAL_IDS=['YGOR','FRITZ','ESCORT','REGULATORY','ELEVATOR'];
+const HISTORY_KEY='rotation_history_v3';
+
+// How many turntable positions are allowed per rotation
+// Strict = 1 (preferred), Relaxed = 2 (last resort only)
+const TURNTABLE_STRICT=1;
+const TURNTABLE_RELAXED=2;
+// How many front-room positions per rotation
+const FRONTROOM_LIMIT=1;
+
+function getPos(id){return POSITIONS.find(p=>p.id===id);}
+
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// canAdd: strict mode enforces turntable=1, relaxed allows turntable=2
+function canAdd(candidate, currentSlots, relaxTurntable=false){
+  // Family rule — never relaxed
+  if(candidate.family){
+    for(const s of currentSlots){
+      if(s.family && s.family===candidate.family) return false;
+    }
+  }
+  // Cluster rules
+  if(candidate.cluster==='front-room'){
+    const count=currentSlots.filter(s=>s.cluster==='front-room').length;
+    if(count>=FRONTROOM_LIMIT) return false;
+  }
+  if(candidate.cluster==='turntable'){
+    const limit=relaxTurntable?TURNTABLE_RELAXED:TURNTABLE_STRICT;
+    const turntableInSlots=currentSlots.filter(s=>s.cluster==='turntable');
+    const count=turntableInSlots.length;
+    if(count>=limit) return false;
+    // If this would be a 2nd turntable position, one of the two must be GROUPER or TURNTABLE ASSIST
+    const NON_WALKING_TURNTABLE=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
+    if(count===1){
+      const existingIsNonWalking=turntableInSlots.some(s=>NON_WALKING_TURNTABLE.includes(s.id));
+      const candidateIsNonWalking=NON_WALKING_TURNTABLE.includes(candidate.id);
+      if(!existingIsNonWalking && !candidateIsNonWalking) return false;
+    }
+  }
+  return true;
+}
+
+// Optional positions must only go into 4-spot rotations
+// targetSize = how many total slots this rotation will have
+function canAddOptional(candidate, targetSize){
+  if(candidate.required===false && targetSize<4) return false;
+  return true;
+}
+
+function loadHistory(){
+  try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');}
+  catch{return[];}
+}
+function saveHistory(h){localStorage.setItem(HISTORY_KEY,JSON.stringify(h));}
+
+function rotationSig(rotations){
+  return rotations
+    .filter(r=>r.type!=='special')
+    .map(r=>r.slots.map(s=>s.id).join(','))
+    .sort().join('|');
+}
+
+function addToHistory(sig,rotations){
+  let h=loadHistory();
+  const summary=rotations
+    .filter(r=>r.type!=='special')
+    .map(r=>r.slots.map(s=>s.id.split(' ')[0]).join('→'))
+    .join('  /  ');
+  h.unshift({sig,summary,gen:(h[0]?.gen||0)+1});
+  if(h.length>8) h=h.slice(0,8);
+  saveHistory(h);
+  return h;
+}
+
+function renderHistory(){
+  const h=loadHistory();
+  const el=document.getElementById('history-entries');
+  if(!h.length){
+    el.innerHTML='<span style="color:#333;font-size:.6rem">No generations yet.</span>';
+    return;
+  }
+  el.innerHTML=h.map(e=>`
+    <div class="history-entry">
+      <span class="gen-num">GEN ${e.gen}</span>
+      <span>${e.summary}</span>
+    </div>`).join('');
+}
+
+// Pick N fillers for a rotation
+// targetTotalSize = final size of this rotation (used for optional gating)
+// relaxTurntable = allow 2 turntable positions if needed
+function pickFillers(count, pool, direction, globalUsed, alreadyIn, allowOptional, relaxTurntable=false, blockTurntable=false, rotationType=''){
+  const picked=[];
+  const usedHere=new Set();
+
+  // Called fresh each time a candidate is evaluated so optional count is always current
+  function isValid(p, relaxT, ignoreOptionalLimit=false){
+    if(globalUsed.has(p.id)||usedHere.has(p.id)) return false;
+    if(p.spatial===null) return false;
+    // Hard block turntable fillers when caller requires it (e.g. dispatch endcap rotations)
+    if(blockTurntable && p.cluster==='turntable') return false;
+    // greeterOnly positions can only appear in greeter-ending rotations
+    if(p.greeterOnly && rotationType!=='greeter') return false;
+    // Both required:false and dailyPrompt positions count as 'optional-like'
+    // They can only go in 4-spot rotations and max 1 per rotation
+    const isOpt=p.required===false||p.optional===true;
+    const optInPicked=picked.filter(x=>x.required===false||x.optional===true).length;
+    if(isOpt && !allowOptional) return false;
+    if(isOpt && count<3) return false;
+    if(isOpt && !ignoreOptionalLimit && optInPicked>=1) return false;
+    if(!canAdd(p,[...alreadyIn,...picked],relaxT)) return false;
+    return true;
+  }
+
+  const baseOrder=direction==='ascending'?['front','mid','back']:['back','mid','front'];
+
+  function zonePass(relaxT){
+    // Rebuild zones fresh each round so validity is current
+    const avail=pool.filter(p=>isValid(p,relaxT));
+    const zones={
+      front:shuffle(avail.filter(p=>p.spatial<=10)),
+      mid:shuffle(avail.filter(p=>p.spatial>10&&p.spatial<=20)),
+      back:shuffle(avail.filter(p=>p.spatial>20))
+    };
+    for(const zone of shuffle([...baseOrder])){
+      if(picked.length>=count) break;
+      // Find first valid candidate in this zone (re-check isValid live)
+      const c=zones[zone].find(p=>isValid(p,relaxT));
+      if(c){picked.push(c);usedHere.add(c.id);}
+    }
+  }
+
+  // Pass 1: zone-diverse, strict turntable
+  for(let r=0;r<6&&picked.length<count;r++) zonePass(false);
+
+  // Pass 2: any valid, strict turntable
+  if(picked.length<count){
+    for(const p of shuffle(pool.filter(p=>isValid(p,false)))){
+      if(picked.length>=count) break;
+      picked.push(p); usedHere.add(p.id);
+    }
+  }
+
+  // Pass 3: relax turntable
+  if(picked.length<count&&relaxTurntable){
+    for(const p of shuffle(pool.filter(p=>isValid(p,true)))){
+      if(picked.length>=count) break;
+      picked.push(p); usedHere.add(p.id);
+    }
+  }
+
+  // Pass 4: absolute last resort - relax cluster rules but NEVER put optional in a 3-spot
+  if(picked.length<count){
+    const desperate=pool.filter(p=>{
+      if(globalUsed.has(p.id)||usedHere.has(p.id)) return false;
+      if(p.spatial===null) return false;
+      if(p.required===false && count<3) return false;
+      if(p.required===false && !allowOptional) return false;
+      if(p.required===false && picked.filter(x=>x.required===false).length>=1) return false;
+      return canAdd(p,[...alreadyIn,...picked],true);
+    });
+    for(const p of shuffle(desperate)){
+      if(picked.length>=count) break;
+      picked.push(p); usedHere.add(p.id);
+    }
+  }
+
+  return picked;
+}
+
+function planSizes(fillerPool, numDispatch=3){
+  // Filler counts adapt based on how many dispatches remain as endcaps
+  // When dispatches move to RCS/RSS, remaining rotations absorb extra positions
+  // by upgrading 3-spots to 4-spots
+  //
+  // 3 dispatches remain: G1(3),G2(3),G3(3),D1(2),D2(2),D3(3) = 16 + RCS(3)+RSS(3) = 22 ✓
+  // 2 dispatches remain: G1(3),G2(3),G3(3),D1(3),D2(3) = 15 + RCS(2)+RSS(3) = 20... need 22
+  //   -> extra 2 go to overflow naturally
+  // 1 dispatch remains:  G1(3),G2(3),G3(3),D1(3) = 12 + RCS(2)+RSS(2) = 16... need 22
+  //   -> extra 6 go to overflow as additional rotations (more 3-spots as you described)
+  const dispatchFillers={3:[2,2,3],2:[3,3],1:[3],0:[]};
+  const dCounts=dispatchFillers[numDispatch]||[2,2,3];
+  const allCounts=[3,3,3,3,3,...dCounts];
+  return allCounts.map(fc=>({fillerCount:fc,targetSize:fc+1,allowOptional:fc===3}));
+}
+
+function constraintScore(p){
+  let score=0;
+  if(p.cluster==='turntable') score+=10;
+  if(p.greeterOnly) score+=20;
+  if(p.family&&p.family!=='rcs-rss'&&p.family!=='greeter'&&p.family!=='dispatch'&&p.family!=='ygor') score+=5;
+  if(p.required===false||p.optional===true) score-=50;
+  return score;
+}
+
+function tryGenerate(){
+  showAlert('','');
+
+  const pool=POSITIONS.filter(p=>!SPECIAL_IDS.includes(p.id)&&p.family!=='rcs-rss');
+  const greeterEndcaps=pool.filter(p=>p.endcap==='greeter');
+  const dispatchEndcaps=pool.filter(p=>p.endcap==='dispatch');
+  const fillerPool=pool.filter(p=>!p.endcap);
+
+  const used=new Set();
+  const rotations=[];
+
+  // Sort filler pool by constraint score
+  const shuffled=shuffle(fillerPool).sort((a,b)=>constraintScore(b)-constraintScore(a));
+
+  // Read checkbox states
+  const rcsWantsDispatch=document.getElementById('rcs-dispatch').checked;
+  const rssWantsDispatch=document.getElementById('rss-dispatch').checked;
+
+  // Pull dispatches for RCS/RSS if requested (take from end to preserve D1/D2)
+  const availableDispatches=[...dispatchEndcaps];
+  let rcsDispatchEndcap=null;
+  let rssDispatchEndcap=null;
+  if(rcsWantsDispatch&&availableDispatches.length>0) rcsDispatchEndcap=availableDispatches.pop();
+  if(rssWantsDispatch&&availableDispatches.length>0) rssDispatchEndcap=availableDispatches.pop();
+  const remainingDispatchEndcaps=availableDispatches;
+
+  // Now we know how many dispatches remain, plan sizes accordingly
+  const numChecked=(rcsWantsDispatch?1:0)+(rssWantsDispatch?1:0);
+  const sizesPlan=planSizes(fillerPool, remainingDispatchEndcaps.length);
+
+  let turntableRelaxUsed=0;
+  function mayRelax(){
+    if(turntableRelaxUsed<1){turntableRelaxUsed++;return true;}
+    return false;
+  }
+
+  // STEP 1 & 2: RCS and RSS
+  // When boxes checked: both become 3-spots (anchor + 1 filler + dispatch OR anchor + 2 fillers)
+  // When no boxes: both are 4-spots (anchor + 3 fillers)
+  let rcsSlot=null;
+  let rssSlot=null;
+
+  if(rcsDispatchEndcap && rssDispatchEndcap){
+    // Both checked: RCS=3-spot with dispatch, RSS=3-spot with dispatch
+    used.add(rcsDispatchEndcap.id);
+    used.add(rssDispatchEndcap.id);
+    const rcsF=pickFillers(1,shuffled,'ascending',used,[getPos('RCS'),rcsDispatchEndcap],false,false,true,'dispatch');
+    rcsF.forEach(p=>used.add(p.id));
+    rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'})),{...rcsDispatchEndcap,role:'endcap'}]};
+    const rssF=pickFillers(1,shuffled,'ascending',used,[getPos('RSS'),rssDispatchEndcap],false,false,true,'dispatch');
+    rssF.forEach(p=>used.add(p.id));
+    rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'})),{...rssDispatchEndcap,role:'endcap'}]};
+  } else if(rcsDispatchEndcap){
+    // RCS checked: RCS=3-spot with dispatch, RSS=3-spot no dispatch
+    used.add(rcsDispatchEndcap.id);
+    const rcsF=pickFillers(1,shuffled,'ascending',used,[getPos('RCS'),rcsDispatchEndcap],false,false,true,'dispatch');
+    rcsF.forEach(p=>used.add(p.id));
+    rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'})),{...rcsDispatchEndcap,role:'endcap'}]};
+    const rssF=pickFillers(2,shuffled,'descending',used,[getPos('RSS')],false,false,false,'rcs-rss');
+    rssF.forEach(p=>used.add(p.id));
+    rssF.sort((a,b)=>b.spatial-a.spatial);
+    rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'}))]};
+  } else if(rssDispatchEndcap){
+    // RSS checked: RSS=3-spot with dispatch, RCS=3-spot no dispatch
+    used.add(rssDispatchEndcap.id);
+    const rssF=pickFillers(1,shuffled,'ascending',used,[getPos('RSS'),rssDispatchEndcap],false,false,true,'dispatch');
+    rssF.forEach(p=>used.add(p.id));
+    rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'})),{...rssDispatchEndcap,role:'endcap'}]};
+    const rcsF=pickFillers(2,shuffled,'ascending',used,[getPos('RCS')],false,false,false,'rcs-rss');
+    rcsF.forEach(p=>used.add(p.id));
+    rcsF.sort((a,b)=>a.spatial-b.spatial);
+    rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'}))]};
+  } else {
+    // No boxes: both 4-spots
+    const rssF=pickFillers(3,shuffled,'descending',used,[getPos('RSS')],true,false,false,'rcs-rss');
+    rssF.forEach(p=>used.add(p.id));
+    rssF.sort((a,b)=>b.spatial-a.spatial);
+    rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'}))]};
+    const rcsF=pickFillers(3,shuffled,'ascending',used,[getPos('RCS')],true,false,false,'rcs-rss');
+    rcsF.forEach(p=>used.add(p.id));
+    rcsF.sort((a,b)=>a.spatial-b.spatial);
+    rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'}))]};
+  }
+
+  rotations.push(rcsSlot);
+  rotations.push(rssSlot);
+
+  // STEP 3: Dispatch fillers
+  const dispatchSlots=[];
+  remainingDispatchEndcaps.forEach((endcap,i)=>{
+    const plan=sizesPlan[5+i];
+    const blockT=i<(remainingDispatchEndcaps.length-1);
+    const f=pickFillers(plan.fillerCount,shuffled,'ascending',used,[endcap],plan.allowOptional,false,blockT,'dispatch');
+    f.forEach(p=>used.add(p.id));
+    f.sort((a,b)=>a.spatial-b.spatial);
+    dispatchSlots.push({label:`→ ${endcap.id}`,type:'dispatch',slots:[...f.map(p=>({...p,role:'filler'})),{...endcap,role:'endcap'}]});
+  });
+
+  // STEP 4: Greeter endcaps (descending)
+  // Pre-assign SECONDARY to one greeter rotation first to guarantee it always gets placed
+  const secondaryPos=getPos('SECONDARY');
+  let secondaryAssigned=false;
+  greeterEndcaps.forEach((endcap,i)=>{
+    const plan=sizesPlan[2+i];
+    let preAssigned=[];
+    // Assign SECONDARY to the first greeter rotation that hasn't used it
+    if(!secondaryAssigned&&!used.has('SECONDARY')){
+      preAssigned=[secondaryPos];
+      used.add('SECONDARY');
+      secondaryAssigned=true;
+    }
+    const remainingCount=plan.fillerCount-preAssigned.length;
+    const f=pickFillers(remainingCount,shuffled,'descending',used,[endcap,...preAssigned],plan.allowOptional,mayRelax(),false,'greeter');
+    f.forEach(p=>used.add(p.id));
+    const allFillers=[...preAssigned,...f];
+    allFillers.sort((a,b)=>b.spatial-a.spatial);
+    rotations.push({label:`→ ${endcap.id}`,type:'greeter',slots:[...allFillers.map(p=>({...p,role:'filler'})),{...endcap,role:'endcap'}]});
+  });
+
+  // STEP 5: Now add dispatch rotations (picked first, displayed after greeter)
+  dispatchSlots.forEach(r=>rotations.push(r));
+
+  // Overflow - relax rules when dispatch boxes are checked
+  const overflowRelaxed=numChecked>0;
+  const remaining=shuffle(fillerPool.filter(p=>!used.has(p.id)));
+  buildOverflow(remaining,overflowRelaxed).forEach(slots=>{
+    rotations.push({label:`Rotation ${rotations.length+1}`,type:'overflow',slots});
+  });
+
+  // Fixed YGOR
+  rotations.push({label:'YGOR / SPECIAL',type:'special',slots:SPECIAL_IDS.map(id=>({...getPos(id),role:'fixed'}))});
+
+  // Inject any stranded optionals into rotations that have room
+  injectStrandedOptionals(rotations, fillerPool);
+
+  // Post-build: strip any rotation that ended up with 2+ optional-like positions
+  // This is a safety net catch-all regardless of where the duplicate crept in
+  rotations.filter(r=>r.type!=='special').forEach(r=>{
+    let optSeen=0;
+    r.slots=r.slots.filter(s=>{
+      const isOpt=s.required===false||s.optional===true;
+      if(isOpt){ optSeen++; if(optSeen>1) return false; }
+      return true;
+    });
+  });
+
+  // Handle leftover positions (overflow rotations under 3 spots)
+  // caused when dispatches move to RCS/RSS
+  // Only try to merge overflow rotations that are UNDER 3 spots (1 or 2 spot)
+  // 3-spot overflow rotations are perfectly valid and should stay as-is
+  const smallOverflows=rotations.filter(r=>r.type==='overflow'&&r.slots.length<3);
+  for(const small of [...smallOverflows]){
+    const idx=rotations.indexOf(small);
+    if(idx===-1) continue;
+    // Try merging into another overflow under 4 spots
+    // Must not violate turntable rules after merge
+    const NON_WALK=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
+    const target=rotations.find(r=>{
+      if(r.type!=='overflow'||r===small) return false;
+      if(r.slots.length+small.slots.length>4) return false;
+      const merged=[...r.slots,...small.slots];
+      // Check turntable count after merge
+      const ttCount=merged.filter(s=>s.cluster==='turntable').length;
+      if(ttCount>2) return false;
+      if(ttCount===2){
+        const hasNonWalk=merged.some(s=>s.cluster==='turntable'&&NON_WALK.includes(s.id));
+        if(!hasNonWalk) return false;
+      }
+      // Check family rules - no two from same family
+      const families=merged.map(s=>s.family).filter(Boolean);
+      if(families.length!==new Set(families).size) return false;
+      // Check no optional in a sub-4-spot result
+      const hasOpt=merged.some(s=>s.required===false||s.optional===true);
+      if(hasOpt&&merged.length<4) return false;
+      return true;
+    });
+    if(target){
+      target.slots.push(...small.slots);
+      target.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+      rotations.splice(idx,1);
+    } else {
+      // Steal a non-anchor, non-endcap filler from the largest rotation
+      const donor=rotations
+        .filter(r=>r.type!=='special'&&r.slots.filter(s=>s.role==='filler').length>2)
+        .sort((a,b)=>b.slots.length-a.slots.length)[0];
+      if(donor){
+        const fi=donor.slots.findIndex(s=>s.role==='filler');
+        if(fi!==-1){
+          small.slots.push(donor.slots.splice(fi,1)[0]);
+          small.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+        }
+      }
+      // If still under 3, fail and retry
+      // Try to steal a filler from the largest overflow rotation to pad this one
+      if(small.slots.length<3){
+        const donor=rotations
+          .filter(r=>r.type==='overflow'&&r!==small&&r.slots.length>3)
+          .sort((a,b)=>b.slots.length-a.slots.length)[0];
+        if(donor){
+          const fi=donor.slots.findIndex(s=>s.role==='filler'&&
+            canAdd(s,small.slots,true));
+          if(fi!==-1){
+            small.slots.push(donor.slots.splice(fi,1)[0]);
+            small.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+          }
+        }
+        if(small.slots.length<3) return {success:false,reason:'leftover too small'};
+      }
+    }
+  }
+
+  // Validate 0a: RCS/RSS must be 4-spot when no boxes checked
+  // When boxes checked, they intentionally become 3-spots
+  const rcssRots=rotations.filter(r=>r.type==='rcs-rss');
+  if(numChecked===0&&rcssRots.some(r=>r.slots.length<4)){
+    return {success:false,reason:'RCS/RSS under 4 spots'};
+  }
+  if(numChecked>0&&rcssRots.some(r=>r.slots.length<3)){
+    return {success:false,reason:'RCS/RSS under 3 spots'};
+  }
+
+  // Validate 0b: no optional in any non-overflow rotation under 4 slots
+  // When boxes checked, overflow is relaxed and can have optional in 3-spot
+  const optIn3=rotations.filter(r=>r.type!=='special'&&
+    (overflowRelaxed ? r.type!=='overflow' : true)&&
+    r.slots.length<4&&
+    r.slots.some(s=>s.required===false||s.optional===true));
+  if(optIn3.length>0){
+    return {success:false,reason:'optional in sub-4-spot rotation'};
+  }
+
+  // Validate 1: no rotation under 3 spots anywhere
+  const tooSmall=rotations.filter(r=>r.type!=='special'&&r.slots.length<3);
+  if(tooSmall.length>0){ return {success:false,reason:'rotation under 3 spots'}; }
+
+  // Validate 2: no rotation has more than 1 optional-like position
+  const tooManyOpt=rotations.filter(r=>r.type!=='special'&&
+    r.slots.filter(s=>s.required===false||s.optional===true).length>1);
+  if(tooManyOpt.length>0){
+    // 'Generation failed: a rotation has more than 1 optional position. Hit Generate again.','error');
+    return {success:false,reason:'rotation has 2+ optionals'};
+  }
+
+  // Validate 4: no rotation has more than 2 turntable positions
+  // For overflow: if 2 turntable, one must be non-walking
+  const NON_WALK_IDS=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
+  const tooManyTurntable=rotations.filter(r=>{
+    if(r.type==='special') return false;
+    // Turntable rules apply everywhere including overflow
+    const tt=r.slots.filter(s=>s.cluster==='turntable');
+    if(tt.length>2) return true;
+    if(tt.length===2){
+      const hasNonWalk=tt.some(s=>NON_WALK_IDS.includes(s.id));
+      if(!hasNonWalk) return true;
+    }
+    return false;
+  });
+  if(tooManyTurntable.length>0){
+    // 'Generation failed: a rotation has more than 2 turntable positions. Hit Generate again.','error');
+    return {success:false,reason:'rotation has 3+ turntable'};
+  }
+
+  // Validate 3: every single non-special, non-anchor, non-endcap position must be placed
+  const allPlaced=new Set(rotations.flatMap(r=>r.slots.map(s=>s.id)));
+  const missing=POSITIONS.filter(p=>
+    !SPECIAL_IDS.includes(p.id)&&
+    p.family!=='rcs-rss'&&
+    p.family!=='greeter'&&
+    p.family!=='dispatch'&&
+    p.family!=='ygor'&&
+    !p.endcap&&
+    !allPlaced.has(p.id)
+  );
+  if(missing.length>0){
+    return {success:false,reason:'missing: '+missing.map(p=>p.id).join(', ')};
+  }
+
+  const sig=rotationSig(rotations);
+  const history=loadHistory();
+  const isDuplicate=history.some(h=>h.sig===sig);
+  return {success:true, rotations, sig, isDuplicate};
+}
+
+function buildOverflow(remaining, relaxed=false){
+  const rots=[];
+  const used=new Set();
+  while(true){
+    const avail=remaining.filter(p=>!used.has(p.id)&&!p.greeterOnly&&
+      (relaxed||p.required!==false));
+    if(!avail.length) break;
+    const slots=[];
+
+    const optCount=()=>slots.filter(s=>s.required===false||s.optional===true).length;
+    const reqCount=()=>slots.filter(s=>s.required!==false&&!s.optional).length;
+    for(const p of shuffle(avail)){
+      if(slots.length>=4) break;
+      if(!relaxed){
+        // Strict mode: max 1 optional, only in 4-spot
+        if((p.required===false||p.optional===true) && optCount()>=1) continue;
+        if((p.required===false||p.optional===true) && reqCount()<3) continue;
+      } else {
+        // Relaxed mode: max 1 optional, but can go in 3-spot
+        if((p.required===false||p.optional===true) && optCount()>=1) continue;
+      }
+      if(canAdd(p,slots,relaxed)){slots.push({...p,role:'filler'});used.add(p.id);}
+    }
+    // If we got stuck with 0 slots but turntable blocking caused it, allow 2 turntable max
+    if(!slots.length){
+      for(const p of shuffle(avail)){
+        if(slots.length>=4) break;
+        if(canAdd(p,slots,true)){slots.push({...p,role:'filler'});used.add(p.id);}
+      }
+    }
+    if(!slots.length) break;
+
+    // Guarantee minimum 3-spot, required only, escalating fallbacks
+    if(slots.length<3){
+      const extras=remaining.filter(p=>!used.has(p.id)&&p.required!==false);
+      for(const p of shuffle(extras)){
+        if(slots.length>=3) break;
+        if(canAdd(p,slots,false)){slots.push({...p,role:'filler'});used.add(p.id);}
+      }
+      if(slots.length<3){
+        for(const p of shuffle(remaining.filter(p=>!used.has(p.id)&&p.required!==false))){
+          if(slots.length>=3) break;
+          if(canAdd(p,slots,true)){slots.push({...p,role:'filler'});used.add(p.id);}
+        }
+      }
+      if(slots.length<3){
+        for(const p of shuffle(remaining.filter(p=>!used.has(p.id)&&p.required!==false))){
+          if(slots.length>=3) break;
+          slots.push({...p,role:'filler'});used.add(p.id);
+        }
+      }
+    }
+
+    slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+    rots.push(slots);
+  }
+  return rots;
+}
+
+// Post-process: inject any stranded optional positions into rotations that:
+// 1. Are not special/fixed
+// 2. Have fewer than 4 slots
+// 3. Don't already have an optional
+// 4. Pass family/cluster rules
+function injectStrandedOptionals(rotations, fillerPool){
+  const placed=new Set(rotations.flatMap(r=>r.slots.map(s=>s.id)));
+  const stranded=fillerPool.filter(p=>p.required===false&&!placed.has(p.id));
+  if(!stranded.length) return;
+
+  for(const opt of shuffle(stranded)){
+    // Find eligible rotations: non-special, at least 3 slots already (so adding makes 4), no optional yet
+    const eligible=rotations.filter(r=>{
+      if(r.type==='special') return false;
+      if(r.slots.length>=4) return false;
+      if(r.slots.length<3) return false; // must already be 3-spot so adding makes it 4
+      if(r.slots.some(s=>s.required===false||s.optional===true)) return false;
+      if(opt.greeterOnly && r.type!=='greeter') return false;
+      if(!canAdd(opt,r.slots,false)) return false;
+      return true;
+    });
+    if(!eligible.length) continue;
+    // Pick the rotation with fewest slots (most room)
+    eligible.sort((a,b)=>a.slots.length-b.slots.length);
+    const target=eligible[0];
+    target.slots.push({...opt,role:'filler'});
+    // Re-sort slots spatially (keep endcap last, anchor first)
+    const anchor=target.slots.find(s=>s.role==='anchor');
+    const endcap=target.slots.find(s=>s.role==='endcap');
+    const fillers=target.slots.filter(s=>s.role==='filler');
+    fillers.sort((a,b)=>{
+      if(target.type==='dispatch'||target.type==='rcs-rss'&&anchor) return a.spatial-b.spatial;
+      return b.spatial-a.spatial;
+    });
+    if(anchor) target.slots=[anchor,...fillers,...(endcap?[endcap]:[])];
+    else target.slots=[...fillers,...(endcap?[endcap]:[])];
+  }
+}
+
+function renderRotations(rotations){
+  const out=document.getElementById('rotations-output');
+  const pre=rotations.filter(r=>['rcs-rss','greeter','dispatch'].includes(r.type));
+  const over=rotations.filter(r=>r.type==='overflow');
+  const spec=rotations.filter(r=>r.type==='special');
+  let html='';
+  html+=`<div class="section-divider"><span>Pre-Structured Rotations</span></div><div class="rotations-grid">`;
+  pre.forEach((r,i)=>{html+=renderCard(r,i+1);});
+  html+=`</div>`;
+  if(over.length){
+    html+=`<div class="section-divider"><span>Overflow Rotations</span></div><div class="rotations-grid">`;
+    over.forEach((r,i)=>{html+=renderCard(r,pre.length+i+1);});
+    html+=`</div>`;
+  }
+  html+=`<div class="section-divider"><span>Fixed Special Rotation</span></div><div class="rotations-grid">`;
+  spec.forEach(r=>{html+=renderCard(r,rotations.length);});
+  html+=`</div>`;
+  out.innerHTML=html;
+  renderSidebar(rotations);
+}
+
+function renderCard(rot,num){
+  const bm={
+    'rcs-rss':['badge-rcs','ANCHOR'],
+    'greeter':['badge-greeter','GREETER END'],
+    'dispatch':['badge-dispatch','DISPATCH END'],
+    'special':['badge-special','FIXED'],
+    'overflow':['badge-overflow','OVERFLOW']
+  };
+  const[bc,bl]=bm[rot.type]||['badge-overflow',''];
+  const cc=`rotation-card ${rot.type==='special'?'special':rot.type==='rcs-rss'?'rcs-rss':rot.type}`;
+  let html=`<div class="${cc}">
+    <div class="rotation-header">
+      <span class="rotation-title">ROT ${num}</span>
+      <div style="display:flex;gap:5px;align-items:center">
+        <span class="rotation-size">${rot.slots.length}-SPOT</span>
+        <span class="rotation-badge ${bc}">${bl}</span>
+      </div>
+    </div>
+    <div class="rotation-slots">`;
+  rot.slots.forEach((slot,idx)=>{
+    const sc=slot.role==='anchor'?'slot anchor'
+      :slot.endcap==='greeter'?'slot endcap-greeter'
+      :slot.endcap==='dispatch'?'slot endcap-dispatch'
+      :(slot.required===false||slot.optional)?'slot is-optional'
+      :'slot';
+    const tag=slot.role==='anchor'?`<span class="slot-tag tag-anchor">ANCHOR</span>`
+      :slot.endcap==='greeter'?`<span class="slot-tag tag-greeter">ENDCAP</span>`
+      :slot.endcap==='dispatch'?`<span class="slot-tag tag-dispatch">ENDCAP</span>`
+      :rot.type==='special'?`<span class="slot-tag tag-fixed">FIXED</span>`
+      :(slot.required===false||slot.optional)?`<span class="slot-tag tag-optional">OPT</span>`:'';
+    const sp=slot.spatial!=null?`<span class="slot-spatial">#${slot.spatial}</span>`:'';
+    html+=`<div class="${sc}">
+      <span class="slot-number">${slot.spatial!=null?slot.spatial:'-'}</span>
+      <span class="slot-name">${slot.id}</span>
+      ${tag}
+    </div>`;
+    if(idx<rot.slots.length-1) html+=`<div class="arrow">↓</div>`;
+  });
+  html+=`</div></div>`;
+  return html;
+}
+
+function renderSidebar(rotations){
+  const used=new Set();
+  rotations.forEach(r=>r.slots.forEach(s=>used.add(s.id)));
+  const pool=document.getElementById('position-pool');
+  pool.innerHTML='';
+  POSITIONS.forEach(p=>{
+    const c=document.createElement('div');
+    c.className=`position-chip${used.has(p.id)?' used':''}`;
+    c.innerHTML=`<span>${p.id}</span>
+      <div style="display:flex;gap:3px;align-items:center">
+        ${p.spatial!=null?`<span class="spatial-num">#${p.spatial}</span>`:''}
+        ${(!p.required||p.optional)?`<span class="opt-badge">OPT</span>`:''}
+      </div>`;
+    pool.appendChild(c);
+  });
+}
+
+function updateStats(rotations,history){
+  const ns=rotations.filter(r=>r.type!=='special');
+  document.getElementById('stat-total').textContent=rotations.length;
+  document.getElementById('stat-four').textContent=ns.filter(r=>r.slots.length===4).length;
+  document.getElementById('stat-three').textContent=ns.filter(r=>r.slots.length===3).length;
+  const placed=new Set();
+  rotations.forEach(r=>r.slots.forEach(s=>placed.add(s.id)));
+  document.getElementById('stat-placed').textContent=placed.size;
+  document.getElementById('stat-gen').textContent=history[0]?.gen||1;
+}
+
+function resetRotations(){
+  document.getElementById('rotations-output').innerHTML=`
+    <div class="empty-state">
+      <div class="icon">⬡</div>
+      <p>No rotations generated yet.<br>Click <strong>Generate</strong> to build this week's board.</p>
+    </div>`;
+  document.getElementById('status-bar').style.display='none';
+  renderSidebar([]);
+  showAlert('','');
+}
+
+function clearHistory(){
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+  showAlert('History cleared — fresh generations accepted.','success');
+}
+
+function showAlert(msg,type){
+  const el=document.getElementById('alert');
+  el.textContent=msg;
+  el.className=`alert${msg?' show '+type:''}`;
+}
+
+function generateRotations(){
+  showAlert('','');
+  let result;
+  try{
+    result=tryGenerate();
+  } catch(e){
+    showAlert('JavaScript error: '+e.message,'error');
+    console.error(e);
+    return;
+  }
+  if(!result||!result.success){
+    showAlert('Generation failed: '+( result&&result.reason||'unknown reason')+'. Hit Generate again.','error');
+    return;
+  }
+  const newHistory=addToHistory(result.sig,result.rotations);
+  renderRotations(result.rotations);
+  updateStats(result.rotations,newHistory);
+  renderHistory();
+  document.getElementById('status-bar').style.display='flex';
+  if(result.isDuplicate) showAlert('Similar to a recent generation — try again for more variety.','warn');
+}
+
+window.onload=()=>{renderSidebar([]);renderHistory();};
+</script>
+</body>
+</html>
