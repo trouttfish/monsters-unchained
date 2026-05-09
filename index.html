@@ -497,14 +497,15 @@ function tryGenerate(){
   });
 
   // STEP 4: Greeter endcaps (descending)
-  // Pre-assign SECONDARY to one greeter rotation first to guarantee it always gets placed
+  // Pre-assign SECONDARY to a RANDOM greeter rotation for variety week to week
   const secondaryPos=getPos('SECONDARY');
+  const secondaryTargetIdx=Math.floor(Math.random()*greeterEndcaps.length);
   let secondaryAssigned=false;
   greeterEndcaps.forEach((endcap,i)=>{
     const plan=sizesPlan[2+i];
     let preAssigned=[];
-    // Assign SECONDARY to the first greeter rotation that hasn't used it
-    if(!secondaryAssigned&&!used.has('SECONDARY')){
+    // Assign SECONDARY to the randomly chosen greeter rotation
+    if(i===secondaryTargetIdx&&!secondaryAssigned&&!used.has('SECONDARY')){
       preAssigned=[secondaryPos];
       used.add('SECONDARY');
       secondaryAssigned=true;
