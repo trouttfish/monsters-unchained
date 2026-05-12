@@ -776,6 +776,58 @@ function tryGenerate(){
     }
   }
 
+  // Post-build optional priority swaps (when boxes checked):
+  // 1. Move optionals from overflow into dispatch 3-spots that lack one
+  // 2. Move optionals from overflow into greeter 4-spots that lack one
+  if(overflowRelaxed){
+    // Helper: try to swap an optional from a source rotation into a target rotation
+    function swapOptionalIn(source, target){
+      const optIdx=source.slots.findIndex(s=>s.required===false||s.optional===true);
+      if(optIdx===-1) return false;
+      const opt=source.slots[optIdx];
+      for(let ti=0;ti<target.slots.length;ti++){
+        const s=target.slots[ti];
+        if(s.role!=='filler'||s.required===false||s.optional) continue;
+        const sourceWithout=source.slots.filter((_,i)=>i!==optIdx);
+        const targetWithout=target.slots.filter((_,i)=>i!==ti);
+        if(canAdd(s,sourceWithout,false)&&canAdd(opt,targetWithout,false)){
+          source.slots[optIdx]={...s,role:'filler'};
+          target.slots[ti]={...opt,role:'filler'};
+          source.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+          target.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+          return true;
+        }
+      }
+      return false;
+    }
+
+  if(overflowRelaxed){
+    // Swap optionals from overflow into dispatch 3-spots (1-box priority)
+    const overflowsWithOpt=()=>rotations.filter(r=>
+      r.type==='overflow'&&r.slots.some(s=>s.required===false||s.optional===true));
+    const dispatchWithoutOpt=rotations.filter(r=>
+      r.type==='dispatch'&&r.slots.length<4&&
+      !r.slots.some(s=>s.required===false||s.optional===true));
+    for(const dispatch of dispatchWithoutOpt){
+      for(const overflow of overflowsWithOpt()){
+        if(swapOptionalIn(overflow,dispatch)) break;
+      }
+    }
+    // For 2-box: swap optionals from overflow into greeter 4-spots that lack one
+    if(numChecked===2){
+      const greeterWithoutOpt=rotations.filter(r=>
+        r.type==='greeter'&&r.slots.length>=4&&
+        !r.slots.some(s=>s.required===false||s.optional===true));
+      for(const greeter of greeterWithoutOpt){
+        for(const overflow of overflowsWithOpt()){
+          if(swapOptionalIn(overflow,greeter)) break;
+        }
+      }
+    }
+  }
+
+  }
+
   // Post-merge: rebalance oversized rotations
   // If any rotation has 5+ slots, move a position to the smallest valid rotation
   if(overflowRelaxed){
