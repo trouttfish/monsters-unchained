@@ -185,9 +185,9 @@ const POSITIONS=[
   {id:'DISPATCH 1',spatial:23,family:'dispatch',required:true,endcap:'dispatch',cluster:'turntable'},
   {id:'DISPATCH 2',spatial:24,family:'dispatch',required:true,endcap:'dispatch',cluster:'turntable'},
   {id:'DISPATCH 3',spatial:25,family:'dispatch',required:true,endcap:'dispatch',cluster:'turntable'},
-  {id:'SPOTTER',spatial:26,family:null,required:true,cluster:'turntable'},
-  {id:'UNLOAD',spatial:27,family:'unload',required:true,cluster:'turntable'},
-  {id:'UNLOAD 2',spatial:28,family:'unload',required:true,optional:true,cluster:'turntable'},
+  {id:'SPOTTER',spatial:28,family:null,required:true,cluster:'turntable'},
+  {id:'UNLOAD',spatial:26,family:'unload',required:true,cluster:'turntable'},
+  {id:'UNLOAD 2',spatial:27,family:'unload',required:false,cluster:'turntable'},
   {id:'LOCKER UNLOAD 1',spatial:18,family:'locker',required:true},
   {id:'LOCKER UNLOAD 2',spatial:19,family:'locker',required:true},
   {id:'YGOR',spatial:null,family:'ygor',required:true,special:true},
@@ -310,11 +310,14 @@ function pickFillers(count, pool, direction, globalUsed, alreadyIn, allowOptiona
     if(p.greeterOnly && rotationType!=='greeter') return false;
     // Both required:false and dailyPrompt positions count as 'optional-like'
     // They can only go in 4-spot rotations and max 1 per rotation
-    const isOpt=p.required===false||p.optional===true;
-    const optInPicked=picked.filter(x=>x.required===false||x.optional===true).length;
-    if(isOpt && !allowOptional) return false;
-    if(isOpt && count<3) return false;
-    if(isOpt && !ignoreOptionalLimit && optInPicked>=1) return false;
+    // True optionals (required:false) are pre-assigned - never pick them here
+    if(p.required===false) return false;
+    const isOptLike=p.optional===true;
+    const optLikeInPicked=picked.filter(x=>x.optional===true).length;
+    if(isOptLike && !allowOptional) return false;
+    if(isOptLike && count<3) return false;
+
+    if(isOptLike && !ignoreOptionalLimit && optLikeInPicked>=1) return false;
     if(!canAdd(p,[...alreadyIn,...picked],relaxT)) return false;
     return true;
   }
@@ -375,19 +378,18 @@ function pickFillers(count, pool, direction, globalUsed, alreadyIn, allowOptiona
   return picked;
 }
 
-function planSizes(fillerPool, numDispatch=3, numChecked=0){
-  // Filler counts per rotation
-  // 0 boxes: RCS(3)+RSS(3)+G1(3)+G2(3)+G3(3)+D1(2)+D2(2)+D3(3) = 22
-  // 1 box:   RCS(1)+RSS(2)+G1(3)+G2(3)+G3(3)+D1(2)+D2(2) = 16, overflow gets 6 = two 3-spots
-  // 2 boxes: RCS(1)+RSS(1)+G1(3)+G2(3)+G3(3)+D1(2) = 13, overflow gets 9 = three 3-spots
+function planSizes(fillerPool, numDispatch=3, numChecked=0, greeterCounts=[3,3,3]){
+  // Dispatch filler counts: D1=2(3-spot), D2=2(3-spot), D3=3(4-spot) when 3 remain
+  // When fewer dispatches remain, adjust accordingly
   let dispatchFillers;
   if(numChecked===0) dispatchFillers={3:[2,2,3],2:[3,3],1:[3],0:[]};
-  else if(numChecked===1) dispatchFillers={3:[2,2,3],2:[2,2],1:[2],0:[]};
-  else dispatchFillers={3:[2,2,3],2:[2,2],1:[2],0:[]};
+  else if(numChecked===1) dispatchFillers={3:[2,2,3],2:[2,3],1:[3],0:[]}; // D2 gets 3 fillers = 4-spot for 1-box
+  else dispatchFillers={3:[2,2,3],2:[2,3],1:[3],0:[]};
   const dCounts=dispatchFillers[numDispatch]||[2,2,3];
-  const allCounts=[3,3,3,3,3,...dCounts];
-  return allCounts.map(fc=>({fillerCount:fc,targetSize:fc+1,allowOptional:fc===3}));
+  const allCounts=[3,3,...greeterCounts,...dCounts];
+  return allCounts.map(fc=>({fillerCount:fc,targetSize:fc+1,allowOptional:false}));
 }
+
 
 function constraintScore(p){
   let score=0;
@@ -396,6 +398,24 @@ function constraintScore(p){
   if(p.family&&p.family!=='rcs-rss'&&p.family!=='greeter'&&p.family!=='dispatch'&&p.family!=='ygor') score+=5;
   if(p.required===false||p.optional===true) score-=50;
   return score;
+}
+
+function injectPreAssigned(slots, optionalPos, descending=false){
+  if(!optionalPos) return slots;
+  const lastSlot=slots[slots.length-1];
+  if(lastSlot&&lastSlot.role==='endcap'){
+    const fillers=[...slots.slice(0,-1),{...optionalPos,role:'filler'}];
+    if(descending) fillers.sort((a,b)=>(b.spatial||0)-(a.spatial||0));
+    else fillers.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+    return [...fillers,lastSlot];
+  }
+  // No endcap (RCS/RSS) - append and sort by direction
+  const all=[...slots,{...optionalPos,role:'filler'}];
+  const anchor=all.find(s=>s.role==='anchor');
+  const fillers=all.filter(s=>s.role==='filler');
+  if(descending) fillers.sort((a,b)=>(b.spatial||0)-(a.spatial||0));
+  else fillers.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+  return anchor?[anchor,...fillers]:fillers;
 }
 
 function tryGenerate(){
@@ -426,7 +446,65 @@ function tryGenerate(){
 
   // Now we know how many dispatches remain, plan sizes accordingly
   const numChecked=(rcsWantsDispatch?1:0)+(rssWantsDispatch?1:0);
-  const sizesPlan=planSizes(fillerPool, remainingDispatchEndcaps.length, numChecked);
+  const overflowRelaxed=numChecked>0; // relax overflow rules when boxes checked
+
+  // PRE-PLAN OPTIONAL PLACEMENT
+  // Assign each true optional (required:false) to a named rotation slot before filling
+  // Uses rotation names not indices to avoid index confusion
+  // Choose SECONDARY greeter target BEFORE optional assignment to avoid conflict
+  const secondaryTargetIdx=Math.floor(Math.random()*greeterEndcaps.length);
+  const secondaryGreeterName=['G1','G2','G3'][secondaryTargetIdx];
+
+  const trueOptionals=shuffle(fillerPool.filter(p=>p.required===false));
+  if(trueOptionals.length<5) return {success:false,reason:`trueOptionals only has ${trueOptionals.length}: ${trueOptionals.map(p=>p.id).join(',')}`};
+  // Note: if more optionals than eligible slots, extras go to overflow naturally
+  
+  // Build list of eligible rotation names (4-spots only)
+  // No boxes: RCS(4), RSS(4), G1(4), G2(4), G3(4), D3(4) = 6 slots for 5 optionals
+  // 1 box:    G1(4), G2(4), G3(4), D2(4) = 4 slots (1 optional may go to overflow)
+  // 2 boxes:  G1(4), G2(4), G3(4), D1(4) = 4 slots (1 optional may go to overflow)
+  let eligibleSlots=[];
+  // Always assign optionals to RCS, RSS + 2 greeters (not SECONDARY one) + D3
+  // 6 slots for 5 optionals - one greeter/dispatch slot always skipped randomly
+  // Coin flip (heads/tails) to be added post-Tuesday presentation
+  const coinResult='HEADS'; // always heads for now
+  const greeterEligibleNoSecondary=shuffle(['G1','G2','G3'].filter(g=>g!==secondaryGreeterName));
+  if(numChecked===0) eligibleSlots=['RCS','RSS',...greeterEligibleNoSecondary,'D3'];
+  else if(numChecked===1) eligibleSlots=[...greeterEligibleNoSecondary,'D2','D3'];
+  else eligibleSlots=[...greeterEligibleNoSecondary,'D1','D3'];
+  
+  const optionalBySlot={}; // slotName -> optional position
+  // Assign optionals to eligible 4-spot slots
+  // No boxes: RCS+RSS get 2, remaining 3 go to 2 greeters+D3
+  // 1 box: all 5 go to 2 greeters+D2+D3 (4 slots, 1 optional goes to overflow)
+  // 2 boxes: all 5 go to 2 greeters+D1+D3 (4 slots, 1 optional goes to overflow)
+  if(numChecked===0){
+    optionalBySlot['RCS']=trueOptionals[0];
+    optionalBySlot['RSS']=trueOptionals[1];
+    const otherSlots=shuffle([...greeterEligibleNoSecondary,'D3']);
+    [trueOptionals[2],trueOptionals[3],trueOptionals[4]].forEach((opt,i)=>{
+      if(i<otherSlots.length) optionalBySlot[otherSlots[i]]=opt;
+    });
+  } else if(numChecked===1){
+    // 1-box: assign to all 3 greeters + D2 (upgraded to 4-spot) = 4 homes
+    // 5th optional goes to overflow naturally (unassigned, stays in pool)
+    const otherSlots=shuffle(['G1','G2','G3','D2']);
+    trueOptionals.forEach((opt,i)=>{
+      if(i<otherSlots.length) optionalBySlot[otherSlots[i]]=opt;
+    });
+  } else {
+    // 2-box: D3->RCS, D2->RSS, D1 is 4-spot (fillerCount=3) -> eligible
+    const otherSlots=shuffle([...greeterEligibleNoSecondary,'D1']);
+    trueOptionals.forEach((opt,i)=>{
+      if(i<otherSlots.length) optionalBySlot[otherSlots[i]]=opt;
+    });
+  }
+
+  // greeterCounts: all target 4-spot, flex to 3-spot naturally if positions run short
+  const greeterCounts=[3,3,3];
+
+  // Now compute sizesPlan with final greeterCounts
+  const sizesPlan=planSizes(fillerPool, remainingDispatchEndcaps.length, numChecked, greeterCounts);
 
   let turntableRelaxUsed=0;
   function mayRelax(){
@@ -451,7 +529,7 @@ function tryGenerate(){
     rssF.forEach(p=>used.add(p.id));
     rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'})),{...rssDispatchEndcap,role:'endcap'}]};
   } else if(rcsDispatchEndcap){
-    // RCS checked: RCS=3-spot with dispatch, RSS=3-spot no dispatch
+    // RCS checked: RCS=3-spot with dispatch, RSS=3-spot with optional
     used.add(rcsDispatchEndcap.id);
     const rcsF=pickFillers(1,shuffled,'ascending',used,[getPos('RCS'),rcsDispatchEndcap],false,false,true,'dispatch');
     rcsF.forEach(p=>used.add(p.id));
@@ -461,7 +539,7 @@ function tryGenerate(){
     rssF.sort((a,b)=>b.spatial-a.spatial);
     rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'}))]};
   } else if(rssDispatchEndcap){
-    // RSS checked: RSS=3-spot with dispatch, RCS=3-spot no dispatch
+    // RSS checked: RSS=3-spot with dispatch, RCS=3-spot with optional
     used.add(rssDispatchEndcap.id);
     const rssF=pickFillers(1,shuffled,'ascending',used,[getPos('RSS'),rssDispatchEndcap],false,false,true,'dispatch');
     rssF.forEach(p=>used.add(p.id));
@@ -471,15 +549,22 @@ function tryGenerate(){
     rcsF.sort((a,b)=>a.spatial-b.spatial);
     rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'}))]};
   } else {
-    // No boxes: both 4-spots
-    const rssF=pickFillers(3,shuffled,'descending',used,[getPos('RSS')],true,false,false,'rcs-rss');
+    // No boxes: both 4-spots, reduce by 1 if optional pre-assigned
+    const rssOpt=optionalBySlot['RSS'];
+    if(rssOpt) used.add(rssOpt.id);
+    const rssF=pickFillers(rssOpt?2:3,shuffled,'descending',used,[getPos('RSS')],false,false,false,'rcs-rss');
     rssF.forEach(p=>used.add(p.id));
     rssF.sort((a,b)=>b.spatial-a.spatial);
-    rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'}))]};
-    const rcsF=pickFillers(3,shuffled,'ascending',used,[getPos('RCS')],true,false,false,'rcs-rss');
+    rssSlot={label:'RSS',type:'rcs-rss',slots:injectPreAssigned([{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'}))],rssOpt,true)};
+    const rcsOpt=optionalBySlot['RCS'];
+    if(rcsOpt) used.add(rcsOpt.id);
+    const rcsFillerCount=rcsOpt?2:3;
+    const rcsF=pickFillers(rcsFillerCount,shuffled,'ascending',used,[getPos('RCS')],false,false,false,'rcs-rss');
+    if(rcsF.length<rcsFillerCount) return {success:false,reason:`RCS pickFillers got ${rcsF.length}/${rcsFillerCount}, opt=${rcsOpt?rcsOpt.id:'none'}, used=${used.size}, numChecked=${numChecked}`};
+    if(!rcsOpt) return {success:false,reason:`RCS no optional assigned! numChecked=${numChecked}, bySlot=${JSON.stringify(Object.keys(optionalBySlot))}`};
     rcsF.forEach(p=>used.add(p.id));
     rcsF.sort((a,b)=>a.spatial-b.spatial);
-    rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'}))]};
+    rcsSlot={label:'RCS',type:'rcs-rss',slots:injectPreAssigned([{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'}))],rcsOpt)};
   }
 
   rotations.push(rcsSlot);
@@ -490,16 +575,23 @@ function tryGenerate(){
   remainingDispatchEndcaps.forEach((endcap,i)=>{
     const plan=sizesPlan[5+i];
     const blockT=i<(remainingDispatchEndcaps.length-1);
-    const f=pickFillers(plan.fillerCount,shuffled,'ascending',used,[endcap],plan.allowOptional,false,blockT,'dispatch');
-    f.forEach(p=>used.add(p.id));
-    f.sort((a,b)=>a.spatial-b.spatial);
-    dispatchSlots.push({label:`→ ${endcap.id}`,type:'dispatch',slots:[...f.map(p=>({...p,role:'filler'})),{...endcap,role:'endcap'}]});
+    const dispatchNames=['D1','D2','D3'];
+    const dispatchOptional=optionalBySlot[dispatchNames[i]];
+    if(dispatchOptional) used.add(dispatchOptional.id);
+    const dOptReserve=dispatchOptional?1:0;
+    const dFillerCount=plan.fillerCount-dOptReserve;
+    const df=pickFillers(dFillerCount,shuffled,'ascending',used,[endcap],false,false,blockT,'dispatch');
+    // Accept 2 fillers minimum (3-spot) - dispatch can flex down gracefully
+    if(df.length<2) return {success:false,reason:`dispatch ${endcap.id} only got ${df.length} fillers`};
+    df.forEach(p=>used.add(p.id));
+    df.sort((a,b)=>a.spatial-b.spatial);
+    const dSlots=[...df.map(p=>({...p,role:'filler'})),{...endcap,role:'endcap'}];
+    dispatchSlots.push({label:`→ ${endcap.id}`,type:'dispatch',slots:injectPreAssigned(dSlots,dispatchOptional)});
   });
 
   // STEP 4: Greeter endcaps (descending)
   // Pre-assign SECONDARY to a RANDOM greeter rotation for variety week to week
   const secondaryPos=getPos('SECONDARY');
-  const secondaryTargetIdx=Math.floor(Math.random()*greeterEndcaps.length);
   let secondaryAssigned=false;
   greeterEndcaps.forEach((endcap,i)=>{
     const plan=sizesPlan[2+i];
@@ -510,19 +602,29 @@ function tryGenerate(){
       used.add('SECONDARY');
       secondaryAssigned=true;
     }
-    const remainingCount=plan.fillerCount-preAssigned.length;
-    const f=pickFillers(remainingCount,shuffled,'descending',used,[endcap,...preAssigned],plan.allowOptional,mayRelax(),false,'greeter');
+    const greeterNames=['G1','G2','G3'];
+    const greeterOptional=optionalBySlot[greeterNames[i]];
+    // Mark optional as used NOW so pickFillers won't pick it as a regular filler
+    if(greeterOptional) used.add(greeterOptional.id);
+    const optReserve=greeterOptional?1:0;
+    // Minimum 2 fillers for 3-spot, or 1 if SECONDARY pre-assigned (SECONDARY counts as a filler)
+    const minFillers=preAssigned.length>0?1:2;
+    const remainingCount=Math.max(minFillers,plan.fillerCount-preAssigned.length-optReserve);
+    const optIsTurntable=greeterOptional&&greeterOptional.cluster==='turntable';
+    const f=pickFillers(remainingCount,shuffled,'descending',used,[endcap,...preAssigned],false,mayRelax(),optIsTurntable,'greeter');
     f.forEach(p=>used.add(p.id));
     const allFillers=[...preAssigned,...f];
     allFillers.sort((a,b)=>b.spatial-a.spatial);
-    rotations.push({label:`→ ${endcap.id}`,type:'greeter',slots:[...allFillers.map(p=>({...p,role:'filler'})),{...endcap,role:'endcap'}]});
+    const greeterSlots=[...allFillers.map(p=>({...p,role:'filler'})),{...endcap,role:'endcap'}];
+    rotations.push({label:`→ ${endcap.id}`,type:'greeter',slots:injectPreAssigned(greeterSlots,greeterOptional,true)});
   });
+
+  
 
   // STEP 5: Now add dispatch rotations (picked first, displayed after greeter)
   dispatchSlots.forEach(r=>rotations.push(r));
 
-  // Overflow - relax rules when dispatch boxes are checked
-  const overflowRelaxed=numChecked>0;
+  // Overflow - relaxed rules already set above
   const remaining=shuffle(fillerPool.filter(p=>!used.has(p.id)));
   buildOverflow(remaining,overflowRelaxed).forEach(slots=>{
     rotations.push({label:`Rotation ${rotations.length+1}`,type:'overflow',slots});
@@ -531,13 +633,13 @@ function tryGenerate(){
   // Fixed YGOR
   rotations.push({label:'YGOR / SPECIAL',type:'special',slots:SPECIAL_IDS.map(id=>({...getPos(id),role:'fixed'}))});
 
-  // Inject any stranded optionals into rotations that have room
-  injectStrandedOptionals(rotations, fillerPool);
+  // Optionals are pre-assigned above - no inject step needed
 
   // Post-build: strip any rotation that ended up with 2+ optional-like positions
-  // This is a safety net catch-all regardless of where the duplicate crept in
+  let postBuildStripped=null;
   rotations.filter(r=>r.type!=='special').forEach(r=>{
     let optSeen=0;
+    const before=r.slots.length;
     r.slots=r.slots.filter(s=>{
       const isOpt=s.required===false||s.optional===true;
       if(isOpt){ optSeen++; if(optSeen>1) return false; }
@@ -558,7 +660,7 @@ function tryGenerate(){
     const NON_WALK=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
     const target=rotations.find(r=>{
       if(r.type!=='overflow'||r===small) return false;
-      if(r.slots.length+small.slots.length>4) return false;
+      if(r.slots.length+small.slots.length>5) return false; // allow up to 5 then trim
       const merged=[...r.slots,...small.slots];
       // Check turntable count after merge
       const ttCount=merged.filter(s=>s.cluster==='turntable').length;
@@ -570,19 +672,27 @@ function tryGenerate(){
       // Check family rules - no two from same family
       const families=merged.map(s=>s.family).filter(Boolean);
       if(families.length!==new Set(families).size) return false;
-      // Check no optional in a sub-4-spot result
-      const hasOpt=merged.some(s=>s.required===false||s.optional===true);
-      if(hasOpt&&merged.length<4) return false;
+      // Never merge two rotations that both have optionals
+      const mergedOptCount=merged.filter(s=>s.required===false||s.optional===true).length;
+      if(mergedOptCount>1) return false;
+      // In relaxed mode, allow optional in 3-spot overflow merge
+      const hasOpt=mergedOptCount>0;
+      if(hasOpt&&merged.length<4&&!overflowRelaxed) return false;
       return true;
     });
     if(target){
       target.slots.push(...small.slots);
       target.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+      // Trim to max 4 slots - drop last non-endcap slot if over
+      while(target.slots.length>4){
+        target.slots.pop();
+      }
       rotations.splice(idx,1);
     } else {
       // Steal a non-anchor, non-endcap filler from the largest rotation
+      // Steal from any rotation with 4+ slots (but not special/rcs-rss/greeter/dispatch endcaps)
       const donor=rotations
-        .filter(r=>r.type!=='special'&&r.slots.filter(s=>s.role==='filler').length>2)
+        .filter(r=>r.type==='overflow'&&r.slots.length>3)
         .sort((a,b)=>b.slots.length-a.slots.length)[0];
       if(donor){
         const fi=donor.slots.findIndex(s=>s.role==='filler');
@@ -592,20 +702,103 @@ function tryGenerate(){
         }
       }
       // If still under 3, fail and retry
-      // Try to steal a filler from the largest overflow rotation to pad this one
+      // Try to steal a filler from any 4-spot rotation to pad this one to 3
       if(small.slots.length<3){
-        const donor=rotations
-          .filter(r=>r.type==='overflow'&&r!==small&&r.slots.length>3)
-          .sort((a,b)=>b.slots.length-a.slots.length)[0];
-        if(donor){
-          const fi=donor.slots.findIndex(s=>s.role==='filler'&&
-            canAdd(s,small.slots,true));
+        const donors=rotations
+          .filter(r=>r.type!=='special'&&r.type!=='rcs-rss'&&r!==small&&r.slots.length>3)
+          .sort((a,b)=>b.slots.length-a.slots.length);
+        for(const donor of donors){
+          const fi=donor.slots.findIndex(s=>{
+            if(s.role!=='filler') return false;
+            if(s.required===false||s.optional===true) return false;
+            if(!canAdd(s,small.slots,false)) return false;
+            if(donor.slots.length-1<3) return false;
+            return true;
+          });
           if(fi!==-1){
             small.slots.push(donor.slots.splice(fi,1)[0]);
             small.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+            break;
           }
         }
-        if(small.slots.length<3) return {success:false,reason:'leftover too small'};
+        if(small.slots.length<3){
+          // Option A: force merge into a valid overflow rotation
+          // Must not create 2+ optionals in target rotation
+          const smallHasOpt=small.slots.some(s=>s.required===false||s.optional===true);
+          const forceDonor=rotations
+            .filter(r=>{
+              if(r.type!=='overflow'||r===small) return false;
+              if(r.slots.length+small.slots.length>4) return false;
+              // Don't create 2+ optionals
+              const targetHasOpt=r.slots.some(s=>s.required===false||s.optional===true);
+              if(smallHasOpt&&targetHasOpt) return false;
+              return true;
+            })
+            .sort((a,b)=>b.slots.length-a.slots.length)[0];
+          if(forceDonor&&small.slots.length>0){
+            forceDonor.slots.push(...small.slots);
+            forceDonor.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+            rotations.splice(rotations.indexOf(small),1);
+          } else {
+            // Last resort: force into overflow rotation, but still check turntable and family
+            const NON_WALK=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
+            const lastResort=rotations
+              .filter(r=>{
+                if(r.type!=='overflow'||r===small||r.slots.length>3) return false;
+                const merged=[...r.slots,...small.slots];
+                // Family check
+                const families=merged.filter(s=>s.family).map(s=>s.family);
+                if(families.length!==new Set(families).size) return false;
+                // Turntable check
+                const tt=merged.filter(s=>s.cluster==='turntable');
+                if(tt.length>2) return false;
+                if(tt.length===2&&!tt.some(s=>NON_WALK.includes(s.id))) return false;
+                return true;
+              })
+              .sort((a,b)=>a.slots.length-b.slots.length)[0];
+            if(lastResort&&small.slots.length>0){
+              // Check family rules before merging
+              const merged=[...lastResort.slots,...small.slots];
+              const families=merged.filter(s=>s.family).map(s=>s.family);
+              const familyConflict=families.length!==new Set(families).size;
+              if(familyConflict){
+                return {success:false,reason:'force merge family conflict'};
+              }
+              lastResort.slots.push(...small.slots);
+              lastResort.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+              rotations.splice(rotations.indexOf(small),1);
+            } else {
+              return {success:false,reason:`leftover too small: ${small.slots.map(s=>s.id).join(',')} (${small.slots.length} slots)`};
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Post-merge: rebalance oversized rotations
+  // If any rotation has 5+ slots, move a position to the smallest valid rotation
+  if(overflowRelaxed){
+    const oversized=rotations.filter(r=>r.type!=='special'&&r.slots.length>4);
+    for(const big of oversized){
+      while(big.slots.length>4){
+        // Find a moveable slot (not anchor, not endcap, prefer non-optional non-turntable)
+        const moveIdx=big.slots.findIndex(s=>
+          s.role==='filler'&&
+          s.required!==false&&
+          s.cluster!=='turntable'
+        );
+        if(moveIdx===-1) break; // nothing safe to move
+        const moving=big.slots[moveIdx];
+        // Find smallest rotation that can accept it
+        const recipient=rotations
+          .filter(r=>r.type!=='special'&&r.type!=='rcs-rss'&&r!==big&&r.slots.length<4)
+          .sort((a,b)=>a.slots.length-b.slots.length)
+          .find(r=>canAdd(moving,r.slots,false)&&!r.slots.some(s=>s.family&&s.family===moving.family));
+        if(!recipient) break;
+        big.slots.splice(moveIdx,1);
+        recipient.slots.push({...moving,role:'filler'});
+        recipient.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
       }
     }
   }
@@ -614,34 +807,41 @@ function tryGenerate(){
   // When boxes checked, they intentionally become 3-spots
   const rcssRots=rotations.filter(r=>r.type==='rcs-rss');
   if(numChecked===0&&rcssRots.some(r=>r.slots.length<4)){
-    return {success:false,reason:'RCS/RSS under 4 spots'};
+    const bad=rcssRots.find(r=>r.slots.length<4);
+    return {success:false,reason:`RCS/RSS under 4 spots: ${bad.label} has ${bad.slots.length} slots (${bad.slots.map(s=>s.id).join(',')})`};
   }
   if(numChecked>0&&rcssRots.some(r=>r.slots.length<3)){
-    return {success:false,reason:'RCS/RSS under 3 spots'};
+    return {success:false,reason:`RCS/RSS under 3 spots`};
   }
 
   // Validate 0b: no optional in any non-overflow rotation under 4 slots
   // When boxes checked, overflow is relaxed and can have optional in 3-spot
   const optIn3=rotations.filter(r=>{
     if(r.type==='special') return false;
-    // When relaxed, skip overflow AND rcs-rss (they're intentionally 3-spot)
-    if(overflowRelaxed&&(r.type==='overflow'||r.type==='rcs-rss')) return false;
+    if(r.type==='rcs-rss') return false; // rcs-rss can be 3-spot by design
+    if(overflowRelaxed) return false; // when boxes checked, optionals allowed anywhere in 3-spots
     return r.slots.length<4&&r.slots.some(s=>s.required===false||s.optional===true);
   });
   if(optIn3.length>0){
-    return {success:false,reason:'optional in sub-4-spot rotation'};
+    const badRot=optIn3[0];
+    return {success:false,reason:`optional in sub-4-spot: ${badRot.label} (${badRot.slots.length} slots, type:${badRot.type})`};
   }
 
   // Validate 1: no rotation under 3 spots anywhere
   const tooSmall=rotations.filter(r=>r.type!=='special'&&r.slots.length<3);
-  if(tooSmall.length>0){ return {success:false,reason:'rotation under 3 spots'}; }
+  if(tooSmall.length>0){ return {success:false,reason:`rotation under 3 spots: ${tooSmall[0].label} has ${tooSmall[0].slots.length} (${tooSmall[0].slots.map(s=>s.id).join(',')})`}; }
 
   // Validate 2: no rotation has more than 1 optional-like position
-  const tooManyOpt=rotations.filter(r=>r.type!=='special'&&
-    r.slots.filter(s=>s.required===false||s.optional===true).length>1);
+  // Exception: overflow rotations in relaxed mode (boxes checked) can have 2+ optionals
+  const tooManyOpt=rotations.filter(r=>{
+    if(r.type==='special') return false;
+    if(overflowRelaxed&&r.type==='overflow') return false;
+    return r.slots.filter(s=>s.required===false||s.optional===true).length>1;
+  });
   if(tooManyOpt.length>0){
-    // 'Generation failed: a rotation has more than 1 optional position. Hit Generate again.','error');
-    return {success:false,reason:'rotation has 2+ optionals'};
+    const bad=tooManyOpt[0];
+    const opts=bad.slots.filter(s=>s.required===false||s.optional===true).map(s=>s.id);
+    return {success:false,reason:`rotation has 2+ optionals: ${bad.label} (${bad.type}) has ${opts.join(' + ')}`};
   }
 
   // Validate 4: no rotation has more than 2 turntable positions
@@ -660,7 +860,7 @@ function tryGenerate(){
   });
   if(tooManyTurntable.length>0){
     // 'Generation failed: a rotation has more than 2 turntable positions. Hit Generate again.','error');
-    return {success:false,reason:'rotation has 3+ turntable'};
+    return {success:false,reason:`rotation has 3+ turntable`};
   }
 
   // Validate 3: every single non-special, non-anchor, non-endcap position must be placed
@@ -670,12 +870,12 @@ function tryGenerate(){
     if(p.family==='rcs-rss'||p.family==='greeter'||p.family==='dispatch'||p.family==='ygor') return false;
     if(p.endcap) return false;
     if(allPlaced.has(p.id)) return false;
-    // In relaxed mode, optional positions are allowed to be missing (stripped by post-build)
-    if(overflowRelaxed&&(p.required===false||p.optional===true)) return false;
+    // True optionals are allowed to be missing - they're optional by definition
+    if(p.required===false) return false;
     return true;
   });
   if(missing.length>0){
-    return {success:false,reason:'missing: '+missing.map(p=>p.id).join(', ')};
+    return {success:false,reason:`missing: `+missing.map(p=>p.id).join(', ')};
   }
 
   const sig=rotationSig(rotations);
@@ -688,8 +888,8 @@ function buildOverflow(remaining, relaxed=false){
   const rots=[];
   const used=new Set();
   while(true){
-    const avail=remaining.filter(p=>!used.has(p.id)&&!p.greeterOnly&&
-      (relaxed||p.required!==false));
+    // Include unassigned optionals (required:false) so they can be placed in 4-spot overflow
+    const avail=remaining.filter(p=>!used.has(p.id)&&!p.greeterOnly);
     if(!avail.length) break;
     const slots=[];
 
@@ -697,13 +897,11 @@ function buildOverflow(remaining, relaxed=false){
     const reqCount=()=>slots.filter(s=>s.required!==false&&!s.optional).length;
     for(const p of shuffle(avail)){
       if(slots.length>=4) break;
+      const isOpt=p.required===false||p.optional===true;
+      if(isOpt && optCount()>=1) continue; // max 1 optional per rotation always
       if(!relaxed){
-        // Strict mode: max 1 optional, only in 4-spot
-        if((p.required===false||p.optional===true) && optCount()>=1) continue;
-        if((p.required===false||p.optional===true) && reqCount()<3) continue;
-      } else {
-        // Relaxed mode: max 1 optional, but can go in 3-spot
-        if((p.required===false||p.optional===true) && optCount()>=1) continue;
+        // Strict: optional only in 4-spot (need 3 required slots first)
+        if(isOpt && reqCount()<3) continue;
       }
       if(canAdd(p,slots,relaxed)){slots.push({...p,role:'filler'});used.add(p.id);}
     }
