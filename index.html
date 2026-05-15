@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monsters Unchained Rotation Creator V1</title>
+<title>Monsters Unchained Rotation Builder</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
 :root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#222;--border:#2e2e2e;--accent:#f0c040;--accent2:#e05a2b;--text:#f0ede8;--text-dim:#777;--green:#4caf7d;--red:#e05a2b;--blue:#5b8dee;--purple:#9b6dff}
@@ -29,6 +29,7 @@ header span{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-di
 .btn-primary:hover{background:#f5d060;transform:translateY(-1px)}
 .btn-secondary{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
 .btn-secondary:hover{border-color:var(--text-dim);color:var(--text)}
+.btn-xs{font-size:11px!important;padding:4px 10px!important;letter-spacing:0.5px;}
 .status-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
 .status-item{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;display:flex;flex-direction:column;gap:2px}
 .status-item .label{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim)}
@@ -102,7 +103,7 @@ header span{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-di
 <body>
 <header>
   <h1>Monsters Unchained</h1>
-  <span>Rotation Creator V1</span>
+  <span>Rotation Builder</span>
 </header>
 <div class="app">
   <aside class="sidebar">
@@ -113,11 +114,17 @@ header span{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-di
   </aside>
   <main class="main">
     <div class="generate-area">
-      <p><strong>Sunday Rotation Builder.</strong> Generates this week's rotations following all spatial, family, proximity, and sizing rules. History tracks the last 8 generations to prevent repeat boards. <em>Created by Alex Troutt.</em></p>
-      <div class="btn-group">
-        <button class="btn btn-secondary" onclick="clearHistory()">Clear History</button>
-        <button class="btn btn-secondary" onclick="resetRotations()">Reset</button>
-        <button class="btn btn-primary" onclick="generateRotations()">&#9654; Generate</button>
+      <p><strong>Monsters Unchained Rotation Builder.</strong> Generates this week's rotations following all spatial, family, proximity, and sizing rules. History tracks the last 8 generations to prevent repeat boards. <em>Created by Alex Troutt.</em></p>
+      <p style="margin:8px 0 0;font-size:13px;color:#aaa;">Hit <strong style="color:#d4a017;">Generate</strong> to build a full week of rotations instantly. Check the dispatch boxes only on weeks where RCS or RSS ends at a dispatch position.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:12px;">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-xs" onclick="showPatchNotes()">Patch Notes</button>
+          <button class="btn btn-secondary btn-xs" onclick="window.open('https://docs.google.com/document/d/1KK9TRRUOUZE1crobn325S11N2ULP22qUvJn2_Ot5AwE/edit?usp=sharing','_blank')">Rules Doc</button>
+          <button class="btn btn-secondary btn-xs" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdR3KzQa_1Nsv3J5boLoEN3hLEnnsL4BiZ3OOd7erGEZCIG9w/viewform?usp=dialog','_blank')">Feedback</button>
+          <button class="btn btn-secondary btn-xs" onclick="clearHistory()">Clear History</button>
+          <button class="btn btn-secondary btn-xs" onclick="resetRotations()">Reset</button>
+        </div>
+        <button class="btn btn-primary" onclick="generateRotations()" style="white-space:nowrap;font-size:13px;padding:8px 28px;">&#9654; GENERATE</button>
       </div>
     </div>
     <div class="dispatch-options">
@@ -178,7 +185,7 @@ const POSITIONS=[
   {id:'QC 2',spatial:14,family:'qc',required:true},
   {id:'SECONDARY RUNNER',spatial:15,family:'qc',required:true},
   {id:'PULSE',spatial:16,family:'qc',required:false},
-  {id:'SECONDARY',spatial:17,family:null,required:true,cluster:'turntable',greeterOnly:true},
+  {id:'SECONDARY',spatial:17,family:null,required:true,cluster:'turntable'},
   {id:'GROUPER',spatial:20,family:null,required:true,cluster:'turntable'},
   {id:'LOAD',spatial:21,family:null,required:true,cluster:'turntable'},
   {id:'TURNTABLE ASSIST',spatial:22,family:null,required:true,cluster:'turntable'},
@@ -219,7 +226,7 @@ function shuffle(arr){
 }
 
 // canAdd: strict mode enforces turntable=1, relaxed allows turntable=2
-function canAdd(candidate, currentSlots, relaxTurntable=false){
+function canAdd(candidate, currentSlots, relaxTurntable=false, rotationType=''){
   // Family rule — never relaxed
   if(candidate.family){
     for(const s of currentSlots){
@@ -231,13 +238,16 @@ function canAdd(candidate, currentSlots, relaxTurntable=false){
     const count=currentSlots.filter(s=>s.cluster==='front-room').length;
     if(count>=FRONTROOM_LIMIT) return false;
   }
+  // Soft yapping rule: avoid 2+ yapping in pre-structured rotations only (not overflow)
+  if(rotationType!=='overflow'&&rotationType!==''&&
+     YAPPING_IDS.includes(candidate.id)&&currentSlots.some(s=>YAPPING_IDS.includes(s.id))) return false;
   if(candidate.cluster==='turntable'){
     const limit=relaxTurntable?TURNTABLE_RELAXED:TURNTABLE_STRICT;
     const turntableInSlots=currentSlots.filter(s=>s.cluster==='turntable');
     const count=turntableInSlots.length;
     if(count>=limit) return false;
     // If this would be a 2nd turntable position, one of the two must be GROUPER or TURNTABLE ASSIST
-    const NON_WALKING_TURNTABLE=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
+    const NON_WALKING_TURNTABLE=['GROUPER','TURNTABLE ASSIST','UNLOAD 2','SECONDARY'];
     if(count===1){
       const existingIsNonWalking=turntableInSlots.some(s=>NON_WALKING_TURNTABLE.includes(s.id));
       const candidateIsNonWalking=NON_WALKING_TURNTABLE.includes(candidate.id);
@@ -318,6 +328,9 @@ function pickFillers(count, pool, direction, globalUsed, alreadyIn, allowOptiona
     if(isOptLike && count<3) return false;
 
     if(isOptLike && !ignoreOptionalLimit && optLikeInPicked>=1) return false;
+    // Soft yapping rule: skip yapping if one already in rotation (not overflow)
+    if(rotationType!=='overflow'&&rotationType!==''&&
+       YAPPING_IDS.includes(p.id)&&picked.some(s=>YAPPING_IDS.includes(s.id))) return false;
     if(!canAdd(p,[...alreadyIn,...picked],relaxT)) return false;
     return true;
   }
@@ -383,13 +396,15 @@ function planSizes(fillerPool, numDispatch=3, numChecked=0, greeterCounts=[3,3,3
   // When fewer dispatches remain, adjust accordingly
   let dispatchFillers;
   if(numChecked===0) dispatchFillers={3:[2,2,3],2:[3,3],1:[3],0:[]};
-  else if(numChecked===1) dispatchFillers={3:[2,2,3],2:[2,3],1:[3],0:[]}; // D2 gets 3 fillers = 4-spot for 1-box
+  else if(numChecked===1) dispatchFillers={3:[2,2,3],2:[2,2],1:[2],0:[]}; // 1-box: D1+D2 both 3-spot to free overflow
   else dispatchFillers={3:[2,2,3],2:[2,3],1:[3],0:[]};
   const dCounts=dispatchFillers[numDispatch]||[2,2,3];
   const allCounts=[3,3,...greeterCounts,...dCounts];
   return allCounts.map(fc=>({fillerCount:fc,targetSize:fc+1,allowOptional:false}));
 }
 
+
+const YAPPING_IDS=['LOAD','PRESHOW LOAD','GROUPER','LOCKER LOAD 1','LOCKER LOAD 2'];
 
 function constraintScore(p){
   let score=0;
@@ -486,14 +501,14 @@ function tryGenerate(){
       if(i<otherSlots.length) optionalBySlot[otherSlots[i]]=opt;
     });
   } else if(numChecked===1){
-    // 1-box: assign to all 3 greeters + D2 (upgraded to 4-spot) = 4 homes
-    // 5th optional goes to overflow naturally (unassigned, stays in pool)
-    const otherSlots=shuffle(['G1','G2','G3','D2']);
+    // 1-box: no optionals in RCS/RSS or dispatch - assign to 3 greeters only
+    // D2 is 3-spot so can't take optional; 2 unassigned optionals go to overflow
+    const otherSlots=shuffle(['G1','G2','G3']);
     trueOptionals.forEach((opt,i)=>{
       if(i<otherSlots.length) optionalBySlot[otherSlots[i]]=opt;
     });
   } else {
-    // 2-box: D3->RCS, D2->RSS, D1 is 4-spot (fillerCount=3) -> eligible
+    // 2-box: no optionals in RCS/RSS (math doesn't work) - assign to greeters + D1
     const otherSlots=shuffle([...greeterEligibleNoSecondary,'D1']);
     trueOptionals.forEach((opt,i)=>{
       if(i<otherSlots.length) optionalBySlot[otherSlots[i]]=opt;
@@ -519,32 +534,32 @@ function tryGenerate(){
   let rssSlot=null;
 
   if(rcsDispatchEndcap && rssDispatchEndcap){
-    // Both checked: RCS=3-spot with dispatch, RSS=3-spot with dispatch
+    // Both checked: both 4-spots with dispatch, both get optionals
     used.add(rcsDispatchEndcap.id);
     used.add(rssDispatchEndcap.id);
-    const rcsF=pickFillers(1,shuffled,'ascending',used,[getPos('RCS'),rcsDispatchEndcap],false,false,true,'dispatch');
+    const rcsF=pickFillers(2,shuffled,'ascending',used,[getPos('RCS'),rcsDispatchEndcap],false,false,true,'dispatch');
     rcsF.forEach(p=>used.add(p.id));
     rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'})),{...rcsDispatchEndcap,role:'endcap'}]};
-    const rssF=pickFillers(1,shuffled,'ascending',used,[getPos('RSS'),rssDispatchEndcap],false,false,true,'dispatch');
+    const rssF=pickFillers(2,shuffled,'ascending',used,[getPos('RSS'),rssDispatchEndcap],false,false,true,'dispatch');
     rssF.forEach(p=>used.add(p.id));
     rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'})),{...rssDispatchEndcap,role:'endcap'}]};
   } else if(rcsDispatchEndcap){
-    // RCS checked: RCS=3-spot with dispatch, RSS=3-spot with optional
+    // RCS checked: both 4-spots, no optionals
     used.add(rcsDispatchEndcap.id);
-    const rcsF=pickFillers(1,shuffled,'ascending',used,[getPos('RCS'),rcsDispatchEndcap],false,false,true,'dispatch');
+    const rcsF=pickFillers(2,shuffled,'ascending',used,[getPos('RCS'),rcsDispatchEndcap],false,false,true,'dispatch');
     rcsF.forEach(p=>used.add(p.id));
     rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'})),{...rcsDispatchEndcap,role:'endcap'}]};
-    const rssF=pickFillers(2,shuffled,'descending',used,[getPos('RSS')],false,false,false,'rcs-rss');
+    const rssF=pickFillers(3,shuffled,'descending',used,[getPos('RSS')],false,false,false,'rcs-rss');
     rssF.forEach(p=>used.add(p.id));
     rssF.sort((a,b)=>b.spatial-a.spatial);
     rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'}))]};
   } else if(rssDispatchEndcap){
-    // RSS checked: RSS=3-spot with dispatch, RCS=3-spot with optional
+    // RSS checked: both 4-spots, no optionals
     used.add(rssDispatchEndcap.id);
-    const rssF=pickFillers(1,shuffled,'ascending',used,[getPos('RSS'),rssDispatchEndcap],false,false,true,'dispatch');
+    const rssF=pickFillers(2,shuffled,'ascending',used,[getPos('RSS'),rssDispatchEndcap],false,false,true,'dispatch');
     rssF.forEach(p=>used.add(p.id));
     rssSlot={label:'RSS',type:'rcs-rss',slots:[{...getPos('RSS'),role:'anchor'},...rssF.map(p=>({...p,role:'filler'})),{...rssDispatchEndcap,role:'endcap'}]};
-    const rcsF=pickFillers(2,shuffled,'ascending',used,[getPos('RCS')],false,false,false,'rcs-rss');
+    const rcsF=pickFillers(3,shuffled,'ascending',used,[getPos('RCS')],false,false,false,'rcs-rss');
     rcsF.forEach(p=>used.add(p.id));
     rcsF.sort((a,b)=>a.spatial-b.spatial);
     rcsSlot={label:'RCS',type:'rcs-rss',slots:[{...getPos('RCS'),role:'anchor'},...rcsF.map(p=>({...p,role:'filler'}))]};
@@ -657,7 +672,7 @@ function tryGenerate(){
     if(idx===-1) continue;
     // Try merging into another overflow under 4 spots
     // Must not violate turntable rules after merge
-    const NON_WALK=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
+    const NON_WALK=['GROUPER','TURNTABLE ASSIST','UNLOAD 2','SECONDARY'];
     const target=rotations.find(r=>{
       if(r.type!=='overflow'||r===small) return false;
       if(r.slots.length+small.slots.length>5) return false; // allow up to 5 then trim
@@ -741,7 +756,7 @@ function tryGenerate(){
             rotations.splice(rotations.indexOf(small),1);
           } else {
             // Last resort: force into overflow rotation, but still check turntable and family
-            const NON_WALK=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
+            const NON_WALK=['GROUPER','TURNTABLE ASSIST','UNLOAD 2','SECONDARY'];
             const lastResort=rotations
               .filter(r=>{
                 if(r.type!=='overflow'||r===small||r.slots.length>3) return false;
@@ -793,8 +808,17 @@ function tryGenerate(){
         if(canAdd(s,sourceWithout,false)&&canAdd(opt,targetWithout,false)){
           source.slots[optIdx]={...s,role:'filler'};
           target.slots[ti]={...opt,role:'filler'};
-          source.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
-          target.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+          // Sort respecting rotation direction and keeping endcap last
+          const sortSlots=(slots, type)=>{
+            const ec=slots.find(s=>s.role==='endcap');
+            const anc=slots.find(s=>s.role==='anchor');
+            const fils=slots.filter(s=>s.role!=='endcap'&&s.role!=='anchor');
+            if(type==='greeter') fils.sort((a,b)=>(b.spatial||0)-(a.spatial||0));
+            else fils.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+            return anc?[anc,...fils,...(ec?[ec]:[])]: [...fils,...(ec?[ec]:[])];
+          };
+          source.slots=sortSlots(source.slots, source.type);
+          target.slots=sortSlots(target.slots, target.type);
           return true;
         }
       }
@@ -850,7 +874,18 @@ function tryGenerate(){
         if(!recipient) break;
         big.slots.splice(moveIdx,1);
         recipient.slots.push({...moving,role:'filler'});
-        recipient.slots.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+        // Sort respecting rotation direction and keeping endcap last
+        const recEndcap=recipient.slots.find(s=>s.role==='endcap');
+        const recFillers=recipient.slots.filter(s=>s.role!=='endcap');
+        const recAnchor=recFillers.find(s=>s.role==='anchor');
+        const recFillersOnly=recFillers.filter(s=>s.role!=='anchor');
+        if(recipient.type==='greeter'){
+          recFillersOnly.sort((a,b)=>(b.spatial||0)-(a.spatial||0));
+        } else {
+          recFillersOnly.sort((a,b)=>(a.spatial||0)-(b.spatial||0));
+        }
+        recipient.slots=recAnchor?[recAnchor,...recFillersOnly,...(recEndcap?[recEndcap]:[])]:
+          [...recFillersOnly,...(recEndcap?[recEndcap]:[])];
       }
     }
   }
@@ -858,12 +893,10 @@ function tryGenerate(){
   // Validate 0a: RCS/RSS must be 4-spot when no boxes checked
   // When boxes checked, they intentionally become 3-spots
   const rcssRots=rotations.filter(r=>r.type==='rcs-rss');
-  if(numChecked===0&&rcssRots.some(r=>r.slots.length<4)){
+  // RCS/RSS must always be 4-spot regardless of checkbox state
+  if(rcssRots.some(r=>r.slots.length<4)){
     const bad=rcssRots.find(r=>r.slots.length<4);
-    return {success:false,reason:`RCS/RSS under 4 spots: ${bad.label} has ${bad.slots.length} slots (${bad.slots.map(s=>s.id).join(',')})`};
-  }
-  if(numChecked>0&&rcssRots.some(r=>r.slots.length<3)){
-    return {success:false,reason:`RCS/RSS under 3 spots`};
+    return {success:false,reason:`RCS/RSS under 4 spots: ${bad.label} has ${bad.slots.length}`};
   }
 
   // Validate 0b: no optional in any non-overflow rotation under 4 slots
@@ -898,7 +931,7 @@ function tryGenerate(){
 
   // Validate 4: no rotation has more than 2 turntable positions
   // For overflow: if 2 turntable, one must be non-walking
-  const NON_WALK_IDS=['GROUPER','TURNTABLE ASSIST','UNLOAD 2'];
+  const NON_WALK_IDS=['GROUPER','TURNTABLE ASSIST','UNLOAD 2','SECONDARY'];
   const tooManyTurntable=rotations.filter(r=>{
     if(r.type==='special') return false;
     // Turntable rules apply everywhere including overflow
@@ -955,13 +988,13 @@ function buildOverflow(remaining, relaxed=false){
         // Strict: optional only in 4-spot (need 3 required slots first)
         if(isOpt && reqCount()<3) continue;
       }
-      if(canAdd(p,slots,relaxed)){slots.push({...p,role:'filler'});used.add(p.id);}
+      if(canAdd(p,slots,relaxed,'overflow')){slots.push({...p,role:'filler'});used.add(p.id);}
     }
     // If we got stuck with 0 slots but turntable blocking caused it, allow 2 turntable max
     if(!slots.length){
       for(const p of shuffle(avail)){
         if(slots.length>=4) break;
-        if(canAdd(p,slots,true)){slots.push({...p,role:'filler'});used.add(p.id);}
+        if(canAdd(p,slots,true,'overflow')){slots.push({...p,role:'filler'});used.add(p.id);}
       }
     }
     if(!slots.length) break;
@@ -976,7 +1009,7 @@ function buildOverflow(remaining, relaxed=false){
       if(slots.length<3){
         for(const p of shuffle(remaining.filter(p=>!used.has(p.id)&&p.required!==false))){
           if(slots.length>=3) break;
-          if(canAdd(p,slots,true)){slots.push({...p,role:'filler'});used.add(p.id);}
+          if(canAdd(p,slots,true,'overflow')){slots.push({...p,role:'filler'});used.add(p.id);}
         }
       }
       if(slots.length<3){
@@ -1147,28 +1180,187 @@ function showAlert(msg,type){
 }
 
 function generateRotations(){
-  showAlert('','');
-  let result;
-  try{
-    result=tryGenerate();
-  } catch(e){
-    showAlert('JavaScript error: '+e.message,'error');
-    console.error(e);
-    return;
+  showAlert('Generating...','');
+  const genBtn=document.querySelector('.btn-primary');
+  if(genBtn) genBtn.disabled=true;
+  let attempts=0;
+  const MAX_ATTEMPTS=50;
+
+  function attempt(){
+    attempts++;
+    let result;
+    try{
+      result=tryGenerate();
+    } catch(e){
+      showAlert('JavaScript error: '+e.message,'error');
+      console.error(e);
+      if(genBtn) genBtn.disabled=false;
+      return;
+    }
+    if(!result||!result.success){
+      if(attempts<MAX_ATTEMPTS){
+        setTimeout(attempt,0);
+        return;
+      }
+      showAlert('Could not generate after '+MAX_ATTEMPTS+' attempts. Try again.','error');
+      if(genBtn) genBtn.disabled=false;
+      return;
+    }
+    if(genBtn) genBtn.disabled=false;
+    const newHistory=addToHistory(result.sig,result.rotations);
+    renderRotations(result.rotations);
+    updateStats(result.rotations,newHistory);
+    renderHistory();
+    document.getElementById('status-bar').style.display='flex';
+    if(result.isDuplicate) showAlert('Similar to a recent generation — try again for more variety.','warn');
+    else showAlert('','');
+
+    // Yapping Family warning
+    const YAPPING=['LOAD','PRESHOW LOAD','GROUPER','LOCKER LOAD 1','LOCKER LOAD 2'];
+    const yappingViolations=result.rotations.filter(r=>
+      r.type!=='special'&&
+      r.slots.filter(s=>YAPPING.includes(s.id)).length>1
+    );
+    if(yappingViolations.length>0){
+      const names=yappingViolations.map(r=>`${r.label} (${r.slots.filter(s=>YAPPING.includes(s.id)).map(s=>s.id).join(' + ')})`).join(', ');
+      showAlert(`⚠️ Yapping positions together: ${names}. Consider regenerating.`,'warn');
+    }
   }
-  if(!result||!result.success){
-    showAlert('Generation failed: '+( result&&result.reason||'unknown reason')+'. Hit Generate again.','error');
-    return;
-  }
-  const newHistory=addToHistory(result.sig,result.rotations);
-  renderRotations(result.rotations);
-  updateStats(result.rotations,newHistory);
-  renderHistory();
-  document.getElementById('status-bar').style.display='flex';
-  if(result.isDuplicate) showAlert('Similar to a recent generation — try again for more variety.','warn');
+
+  setTimeout(attempt,0);
 }
 
 window.onload=()=>{renderSidebar([]);renderHistory();};
 </script>
+
+<!-- Patch Notes Modal -->
+<div id="patch-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;overflow-y:auto;">
+  <div style="max-width:700px;margin:60px auto;background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:40px;position:relative;">
+    <button onclick="document.getElementById('patch-modal').style.display='none'" 
+      style="position:absolute;top:16px;right:16px;background:transparent;border:none;color:#888;font-size:20px;cursor:pointer;">✕</button>
+    <h2 style="color:#d4a017;font-family:'Space Mono',monospace;letter-spacing:2px;margin:0 0 8px;">PATCH NOTES</h2>
+    <p style="color:#666;font-size:13px;margin:0 0 32px;">Monsters Unchained Rotation Builder — by Alex Troutt</p>
+
+    <div class="patch-version">
+      <div class="patch-tag">v1.5 — UI Polish & Quality of Life</div>
+      <ul class="patch-list">
+        <li>Auto-retry: Generate button now retries up to 50 times automatically — no more hammering the button</li>
+        <li>Feedback button added — submit suggestions or bug reports directly from the tool</li>
+        <li>Patch Notes modal added with full version history</li>
+        <li>Rules Doc button links directly to the technical rules document</li>
+        <li>Button layout reorganized — Generate prominent on top, utility buttons clustered below</li>
+        <li>Greeter rotation sort fixed — endcap now always appears last as intended</li>
+        <li>Yapping soft rule enforced in algorithm — positions naturally avoid sharing rotations</li>
+        <li>Naming standardized to "Monsters Unchained Rotation Builder" across all surfaces</li>
+        <li>Version numbers removed from visible UI</li>
+      </ul>
+    </div>
+
+    <div class="patch-version">
+      <div class="patch-tag">v1.4 — Nathan's Operational Updates</div>
+      <ul class="patch-list">
+        <li>SECONDARY reclassified as non-walking turntable — can now appear in dispatch rotations</li>
+        <li>Yapping Family soft rule added: LOAD, PRESHOW LOAD, GROUPER, LOCKER LOAD 1, LOCKER LOAD 2 avoid sharing rotations</li>
+        <li>Warning banner fires after generation if yapping positions end up together</li>
+        <li>RCS and RSS are now always 4-spot rotations regardless of dispatch checkbox state</li>
+        <li>Auto-retry: Generate button now automatically retries up to 50 times without manual re-clicking</li>
+      </ul>
+    </div>
+
+    <div class="patch-version">
+      <div class="patch-tag">v1.3 — Dispatch Checkbox Overhaul</div>
+      <ul class="patch-list">
+        <li>Full dispatch checkbox system implemented (RCS box, RSS box, both boxes)</li>
+        <li>Relaxed mode: when boxes checked, overflow rules loosen to allow optionals in 3-spot rotations</li>
+        <li>Post-build optional swap: optionals move from overflow into dispatch 3-spots, then greeter 4-spots</li>
+        <li>For 2-box mode: additionally swaps optionals from overflow into greeter 4-spots lacking one</li>
+        <li>Force-merge and steal logic added to handle leftover positions in tight math scenarios</li>
+        <li>Post-build rebalancing: oversized rotations donate positions to undersized ones</li>
+      </ul>
+    </div>
+
+    <div class="patch-version">
+      <div class="patch-tag">v1.2 — Optional Position System</div>
+      <ul class="patch-list">
+        <li>5 true optional positions identified: SINGLES LOCKERS, STAIRCASE ROAMER, MERGE, PULSE, UNLOAD 2</li>
+        <li>Optionals pre-assigned to 4-spot rotations so dropping one daily gracefully makes it 3-spot</li>
+        <li>No boxes: RCS and RSS always get optionals; remaining 3 go to greeters and dispatch</li>
+        <li>Optionals never placed in RCS/RSS when dispatch boxes are checked</li>
+        <li>Max 1 optional per rotation enforced everywhere</li>
+      </ul>
+    </div>
+
+    <div class="patch-version">
+      <div class="patch-tag">v1.1 — Core Algorithm & Constraints</div>
+      <ul class="patch-list">
+        <li>SECONDARY greeterOnly rule: randomly assigned to one of three greeter rotations each week</li>
+        <li>Turntable cluster: max 2 per rotation, one must be non-walking if 2 present</li>
+        <li>Front-room cluster: max 1 of SINGLES LOCKERS, VALIDATION, STAIRCASE ROAMER per rotation</li>
+        <li>Full family rule enforcement across all 8 families</li>
+        <li>Greeter rotations descending spatial flow, dispatch/overflow ascending</li>
+        <li>YGOR fixed special rotation: never shuffled, always YGOR→FRITZ→ESCORT→REGULATORY→ELEVATOR</li>
+        <li>Dispatch endcaps always close their rotation</li>
+      </ul>
+    </div>
+
+    <div class="patch-version">
+      <div class="patch-tag">v1.0 — Initial Launch</div>
+      <ul class="patch-list">
+        <li>Web-based rotation board generator for Monsters Unchained attraction</li>
+        <li>35 positions, 8 rotation types, constraint-based random algorithm</li>
+        <li>Generation history tracks last 8 boards to prevent repeats</li>
+        <li>Position pool sidebar shows placed vs unplaced positions</li>
+        <li>Stats bar: total rotations, 4-spot count, 3-spot count, positions placed, generation number</li>
+        <li>Color-coded rotation cards: anchor, greeter endcap, dispatch endcap, fixed special, optional</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<style>
+.patch-version { margin-bottom: 28px; }
+.patch-tag { 
+  display: inline-block;
+  background: #2a2a2a; 
+  color: #d4a017; 
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  border: 1px solid #333;
+}
+.patch-list { 
+  list-style: none; 
+  padding: 0; 
+  margin: 0;
+}
+.patch-list li { 
+  color: #aaa; 
+  font-size: 13px; 
+  padding: 5px 0 5px 16px;
+  border-bottom: 1px solid #1f1f1f;
+  position: relative;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+}
+.patch-list li::before { 
+  content: '→'; 
+  position: absolute; 
+  left: 0; 
+  color: #444;
+}
+</style>
+
+<script>
+function showPatchNotes(){
+  document.getElementById('patch-modal').style.display='block';
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') document.getElementById('patch-modal').style.display='none';
+});
+</script>
+
 </body>
 </html>
