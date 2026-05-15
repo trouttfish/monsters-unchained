@@ -20,6 +20,15 @@ header span{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-di
 .spatial-num{font-size:.56rem;color:var(--text-dim);background:var(--bg);padding:1px 4px;border-radius:2px}
 .opt-badge{font-size:.5rem;padding:1px 4px;border-radius:2px;background:rgba(155,109,255,.2);color:var(--purple);text-transform:uppercase;letter-spacing:1px}
 .main{padding:24px 28px;overflow-y:auto}
+.generate-area{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:20px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;}
+.generate-desc{font-size:13px;line-height:1.6;max-width:700px;}
+.generate-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:700px;}
+.generate-actions .btn-primary{margin-left:auto;padding:7px 24px;font-size:13px;}
+@media(max-width:640px){
+  .generate-actions .btn-primary{margin-left:0;width:100%;}
+  .app-layout{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+}
 .generate-area{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:20px}
 .generate-area p{font-size:.8rem;color:var(--text-dim);line-height:1.6;max-width:480px}
 .generate-area p strong{color:var(--text)}
@@ -114,17 +123,17 @@ header span{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-di
   </aside>
   <main class="main">
     <div class="generate-area">
-      <p><strong>Monsters Unchained Rotation Builder.</strong> Generates this week's rotations following all spatial, family, proximity, and sizing rules. History tracks the last 8 generations to prevent repeat boards. <em>Created by Alex Troutt.</em></p>
-      <p style="margin:8px 0 0;font-size:13px;color:#aaa;">Hit <strong style="color:#d4a017;">Generate</strong> to build a full week of rotations instantly. Check the dispatch boxes only on weeks where RCS or RSS ends at a dispatch position.</p>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:12px;">
-        <div style="display:flex;gap:5px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-xs" onclick="showPatchNotes()">Patch Notes</button>
-          <button class="btn btn-secondary btn-xs" onclick="window.open('https://docs.google.com/document/d/1KK9TRRUOUZE1crobn325S11N2ULP22qUvJn2_Ot5AwE/edit?usp=sharing','_blank')">Rules Doc</button>
-          <button class="btn btn-secondary btn-xs" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdR3KzQa_1Nsv3J5boLoEN3hLEnnsL4BiZ3OOd7erGEZCIG9w/viewform?usp=dialog','_blank')">Feedback</button>
-          <button class="btn btn-secondary btn-xs" onclick="clearHistory()">Clear History</button>
-          <button class="btn btn-secondary btn-xs" onclick="resetRotations()">Reset</button>
-        </div>
-        <button class="btn btn-primary" onclick="generateRotations()" style="white-space:nowrap;font-size:13px;padding:8px 28px;">&#9654; GENERATE</button>
+      <div class="generate-desc">
+        <p style="margin:0 0 4px;"><strong>Monsters Unchained Rotation Builder.</strong> Generates this week's rotations following all spatial, family, proximity, and sizing rules. History tracks the last 8 generations to prevent repeat boards. <em>Created by Alex Troutt.</em></p>
+        <p style="margin:0;font-size:12px;color:#888;">Hit <strong style="color:#d4a017;">Generate</strong> to build a full week of rotations instantly. Check the dispatch endcap options below if you need the RCS and/or RSS rotation(s) to end with dispatch for this week.</p>
+      </div>
+      <div class="generate-actions">
+        <button class="btn btn-secondary btn-xs" onclick="showPatchNotes()">Patch Notes</button>
+        <button class="btn btn-secondary btn-xs" onclick="window.open('https://docs.google.com/document/d/1KK9TRRUOUZE1crobn325S11N2ULP22qUvJn2_Ot5AwE/edit?usp=sharing','_blank')">Rules Doc</button>
+        <button class="btn btn-secondary btn-xs" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdR3KzQa_1Nsv3J5boLoEN3hLEnnsL4BiZ3OOd7erGEZCIG9w/viewform?usp=dialog','_blank')">Feedback</button>
+        <button class="btn btn-secondary btn-xs" onclick="clearHistory()">Clear History</button>
+        <button class="btn btn-secondary btn-xs" onclick="resetRotations()">Reset</button>
+        <button class="btn btn-primary" onclick="generateRotations()">&#9654; Generate</button>
       </div>
     </div>
     <div class="dispatch-options">
