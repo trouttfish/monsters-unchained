@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monsters Unchained — Roster Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#222;--border:#2e2e2e;--accent:#f0c040;--accent2:#e05a2b;--text:#f0ede8;--text-dim:#777;--green:#4caf7d;--red:#e05a2b;--blue:#5b8dee;--purple:#9b6dff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+#auth-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;width:360px;text-align:center}
+.auth-box h1{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--accent);margin-bottom:4px}
+.auth-box p{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:28px;text-transform:uppercase}
+.auth-error{color:var(--red);font-size:.72rem;margin-top:10px;display:none;font-family:'DM Mono',monospace}
+header{background:var(--surface);border-bottom:2px solid var(--accent);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+header h1{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--accent)}
+.subtitle{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase}
+.btn{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:1.5px;text-transform:uppercase;padding:8px 16px;border-radius:4px;border:none;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#000;font-weight:500}
+.btn-primary:hover{background:#f5d060}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--text-dim);color:var(--text)}
+.btn-sm{font-size:.58rem;padding:5px 10px}
+input[type=text],input[type=email],input[type=password],input[type=number]{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:8px 12px;width:100%;outline:none;transition:border-color .15s}
+input:focus{border-color:var(--accent)}
+label{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px}
+.main{padding:28px;max-width:1100px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 22px;margin-bottom:16px}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:14px}
+.shift-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.shift-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px}
+.shift-box-title{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.shift-box.am .shift-box-title{color:var(--green)}
+.shift-box.am-break .shift-box-title{color:var(--blue)}
+.shift-box.pm .shift-box-title{color:var(--accent)}
+.shift-box.pm-break .shift-box-title{color:var(--purple)}
+.shift-time{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text-dim);margin-bottom:10px}
+.field-row{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+.field-row label{margin:0;white-space:nowrap;flex-shrink:0;width:80px}
+.field-row input{width:60px}
+.cbo-note{font-family:'DM Mono',monospace;font-size:.55rem;color:var(--accent);margin-top:4px;letter-spacing:1px}
+.preview-table{width:100%;border-collapse:collapse;font-size:.75rem;margin-top:14px}
+.preview-table th{font-family:'DM Mono',monospace;font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.preview-table td{padding:5px 10px;border-bottom:1px solid rgba(46,46,46,.4);font-family:'DM Mono',monospace;font-size:.65rem}
+.badge{font-family:'DM Mono',monospace;font-size:.5rem;padding:2px 6px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
+.badge-am{background:rgba(76,175,125,.2);color:var(--green)}
+.badge-am-break{background:rgba(91,141,238,.2);color:var(--blue)}
+.badge-pm{background:rgba(240,192,64,.15);color:var(--accent)}
+.badge-pm-break{background:rgba(155,109,255,.2);color:var(--purple)}
+.cbo-tag{font-family:'DM Mono',monospace;font-size:.48rem;background:rgba(240,192,64,.15);color:var(--accent);padding:1px 5px;border-radius:3px;letter-spacing:1px;text-transform:uppercase;margin-left:4px}
+.stat-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.stat{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 14px}
+.stat-label{font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim)}
+.stat-value{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1px;color:var(--accent)}
+.alert{padding:10px 14px;border-radius:5px;font-size:.72rem;margin-bottom:14px;border-left:3px solid;font-family:'DM Mono',monospace;display:none}
+.alert.show{display:block}
+.alert-warn{background:rgba(240,192,64,.1);border-color:var(--accent);color:var(--accent)}
+.alert-error{background:rgba(224,90,43,.1);border-color:var(--red);color:var(--red)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="auth-overlay">
+  <div class="auth-box">
+    <h1>Monsters Unchained</h1>
+    <p>Roster Generator — Captain Login</p>
+    <div style="margin-bottom:14px"><label>Email</label><input type="email" id="auth-email" value="captains@monstersunchained.com"></div>
+    <div style="margin-bottom:14px"><label>Password</label><input type="password" id="auth-password" placeholder="Enter password"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="doLogin()">Sign In</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <div><h1>Monsters Unchained</h1><div class="subtitle">Fake Roster Generator</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a href="index.html" class="btn btn-secondary btn-sm">Rotation Builder</a>
+      <a href="assign.html" class="btn btn-secondary btn-sm">Daily Assignment</a>
+      <button class="btn btn-secondary btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <div class="card">
+      <div class="card-title">Shift Configuration</div>
+      <p style="font-size:.76rem;color:var(--text-dim);margin-bottom:16px;line-height:1.6">Adjust headcounts below, then hit Generate. CBO workers are automatically prioritized for CBO slots. Names are pulled from your real worker database.</p>
+
+      <div class="shift-grid">
+        <div class="shift-box am">
+          <div class="shift-box-title">AM Openers</div>
+          <div class="shift-time">9:15AM &mdash; 3:15PM</div>
+          <div class="field-row"><label>Total</label><input type="number" id="am-total" value="35" min="1" max="100"></div>
+          <div class="field-row"><label>CBO slots</label><input type="number" id="am-cbo" value="8" min="0" max="50"></div>
+          <div class="cbo-note">&#9679; These fill RCS/RSS rotations</div>
+        </div>
+        <div class="shift-box am-break">
+          <div class="shift-box-title">AM Breakers</div>
+          <div class="shift-time">10:00AM &mdash; 3:00PM</div>
+          <div class="field-row"><label>Total</label><input type="number" id="ambreak-total" value="10" min="1" max="50"></div>
+          <div class="field-row"><label>CBO slots</label><input type="number" id="ambreak-cbo" value="2" min="0" max="20"></div>
+          <div class="cbo-note">&#9679; These fill RCS/RSS breaker slots</div>
+        </div>
+        <div class="shift-box pm">
+          <div class="shift-box-title">PM Closers</div>
+          <div class="shift-time">3:00PM &mdash; 9:00PM</div>
+          <div class="field-row"><label>Total</label><input type="number" id="pm-total" value="35" min="1" max="100"></div>
+          <div class="field-row"><label>CBO slots</label><input type="number" id="pm-cbo" value="8" min="0" max="50"></div>
+          <div class="cbo-note">&#9679; These fill RCS/RSS rotations</div>
+        </div>
+        <div class="shift-box pm-break">
+          <div class="shift-box-title">PM Breakers</div>
+          <div class="shift-time">3:00PM &mdash; 8:00PM</div>
+          <div class="field-row"><label>Total</label><input type="number" id="pmbreak-total" value="10" min="1" max="50"></div>
+          <div class="field-row"><label>CBO slots</label><input type="number" id="pmbreak-cbo" value="2" min="0" max="20"></div>
+          <div class="cbo-note">&#9679; These fill RCS/RSS breaker slots</div>
+        </div>
+      </div>
+
+      <div id="main-alert" class="alert alert-warn"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="generateRoster()" id="gen-btn">&#9654; Generate Roster</button>
+        <button class="btn btn-secondary" id="dl-btn" onclick="downloadCSV()" style="display:none">&#8595; Download CSV</button>
+        <span id="worker-status" style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text-dim)"></span>
+      </div>
+    </div>
+
+    <div class="card" id="preview-card" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div class="card-title" style="margin:0">Preview</div>
+        <button class="btn btn-secondary btn-sm" onclick="generateRoster()">&#8634; Regenerate</button>
+      </div>
+      <div class="stat-row" id="stat-row"></div>
+      <div style="overflow-x:auto">
+        <table class="preview-table">
+          <thead><tr><th>#</th><th>Name</th><th>Department</th><th>Schedule</th><th>Shift Type</th><th>CBO</th></tr></thead>
+          <tbody id="preview-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ── CONFIG — same values as assign.html ────────────────────
+const SUPABASE_URL = 'https://degxhripifhimqzahsrg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_URsupyGAoMjN3qBzoq2RzQ_ERih5Ffs';
+// ──────────────────────────────────────────────────────────
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let allWorkers = [];
+let lastRoster = [];
+
+// ── Auth ───────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-password').value;
+  const err = document.getElementById('auth-error');
+  err.style.display = 'none';
+  const { error } = await db.auth.signInWithPassword({ email, password: pass });
+  if (error) { err.textContent = error.message; err.style.display = 'block'; }
+  else initApp();
+}
+async function doLogout() {
+  await db.auth.signOut();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-overlay').style.display = 'flex';
+}
+document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+db.auth.onAuthStateChange((ev, s) => { if (s) initApp(); });
+db.auth.getSession().then(({ data: { session } }) => { if (session) initApp(); });
+
+async function initApp() {
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  await loadWorkers();
+}
+
+async function loadWorkers() {
+  const { data, error } = await db.from('workers').select('*').eq('active', true);
+  if (error) { showAlert('Could not load workers: ' + error.message); return; }
+  allWorkers = data || [];
+  const cboCount = allWorkers.filter(w => w.cbo_certified).length;
+  document.getElementById('worker-status').textContent =
+    `${allWorkers.length} active workers loaded (${cboCount} CBO certified)`;
+}
+
+// ── Generator ──────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getNum(id) { return parseInt(document.getElementById(id).value) || 0; }
+
+function generateRoster() {
+  if (!allWorkers.length) { showAlert('No workers loaded. Check your connection.'); return; }
+
+  const config = [
+    { id: 'am',       label: 'AM Opener',   time: '09:15AM - 03:15PM', total: getNum('am-total'),       cboSlots: getNum('am-cbo'),       badgeClass: 'badge-am' },
+    { id: 'ambreak',  label: 'AM Breaker',  time: '10:00AM - 03:00PM', total: getNum('ambreak-total'),  cboSlots: getNum('ambreak-cbo'),  badgeClass: 'badge-am-break' },
+    { id: 'pm',       label: 'PM Closer',   time: '03:00PM - 09:00PM', total: getNum('pm-total'),       cboSlots: getNum('pm-cbo'),       badgeClass: 'badge-pm' },
+    { id: 'pmbreak',  label: 'PM Breaker',  time: '03:00PM - 08:00PM', total: getNum('pmbreak-total'),  cboSlots: getNum('pmbreak-cbo'),  badgeClass: 'badge-pm-break' },
+  ];
+
+  const totalNeeded = config.reduce((s, c) => s + c.total, 0);
+  const totalCBONeeded = config.reduce((s, c) => s + c.cboSlots, 0);
+
+  const cboWorkers = shuffle(allWorkers.filter(w => w.cbo_certified));
+  const nonCboWorkers = shuffle(allWorkers.filter(w => !w.cbo_certified));
+
+  if (totalNeeded > allWorkers.length) {
+    showAlert(`Only ${allWorkers.length} active workers available but ${totalNeeded} requested. Reduce headcounts.`);
+    return;
+  }
+  if (totalCBONeeded > cboWorkers.length) {
+    showAlert(`Need ${totalCBONeeded} CBO workers but only ${cboWorkers.length} available. Reducing CBO slots to fit.`);
+  }
+
+  hideAlert();
+
+  // Pool management
+  let cboPool = [...cboWorkers];
+  let nonCboPool = [...nonCboWorkers];
+  const usedIds = new Set();
+
+  function pickWorker(requireCBO) {
+    if (requireCBO && cboPool.length > 0) {
+      const w = cboPool.shift();
+      usedIds.add(w.id);
+      return { ...w, isCBO: true };
+    }
+    // Fall back to non-CBO (or use CBO overflow for non-CBO slots)
+    if (nonCboPool.length > 0) {
+      const w = nonCboPool.shift();
+      usedIds.add(w.id);
+      return { ...w, isCBO: false };
+    }
+    if (cboPool.length > 0) {
+      const w = cboPool.shift();
+      usedIds.add(w.id);
+      return { ...w, isCBO: true };
+    }
+    return null;
+  }
+
+  const roster = [];
+
+  for (const shift of config) {
+    // Fill CBO slots first
+    for (let i = 0; i < shift.cboSlots; i++) {
+      const w = pickWorker(true);
+      if (!w) break;
+      roster.push({ worker: w, shift });
+    }
+    // Fill remaining slots with non-CBO
+    const remaining = shift.total - shift.cboSlots;
+    for (let i = 0; i < remaining; i++) {
+      const w = pickWorker(false);
+      if (!w) break;
+      roster.push({ worker: w, shift });
+    }
+  }
+
+  // Sort: by shift type, then alphabetically
+  const order = { 'am': 0, 'ambreak': 1, 'pm': 2, 'pmbreak': 3 };
+  roster.sort((a, b) => {
+    if (order[a.shift.id] !== order[b.shift.id]) return order[a.shift.id] - order[b.shift.id];
+    return a.worker.last_name.localeCompare(b.worker.last_name);
+  });
+
+  lastRoster = roster;
+  renderPreview(roster, config);
+}
+
+function renderPreview(roster, config) {
+  // Stats
+  const statRow = document.getElementById('stat-row');
+  statRow.innerHTML = config.map(c => {
+    const count = roster.filter(r => r.shift.id === c.id).length;
+    const cboCount = roster.filter(r => r.shift.id === c.id && r.worker.cbo_certified).length;
+    return `<div class="stat">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value">${count}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--accent)">${cboCount} CBO</div>
+    </div>`;
+  }).join('') + `<div class="stat">
+    <div class="stat-label">Total</div>
+    <div class="stat-value">${roster.length}</div>
+    <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--text-dim)">${roster.filter(r=>r.worker.cbo_certified).length} CBO total</div>
+  </div>`;
+
+  // Table
+  const tbody = document.getElementById('preview-body');
+  tbody.innerHTML = roster.map((row, i) => {
+    const w = row.worker;
+    const name = `${w.last_name}, ${w.first_name}`;
+    return `<tr>
+      <td style="color:var(--text-dim)">${i + 1}</td>
+      <td>${name}</td>
+      <td>Attnd-Attractions</td>
+      <td>${row.shift.time}</td>
+      <td><span class="badge ${row.shift.badgeClass}">${row.shift.label}</span></td>
+      <td>${w.cbo_certified ? '<span class="cbo-tag">CBO</span>' : ''}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('preview-card').style.display = 'block';
+  document.getElementById('dl-btn').style.display = 'inline-flex';
+  document.getElementById('preview-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── CSV Download ───────────────────────────────────────────
+function downloadCSV() {
+  if (!lastRoster.length) return;
+
+  const today = new Date().toLocaleDateString('en-CA');
+  const rows = [
+    ['Name', 'Department', 'Schedule', 'Hours']
+  ];
+
+  for (const row of lastRoster) {
+    const w = row.worker;
+    const name = `${w.last_name}, ${w.first_name}`;
+    const timeParts = row.shift.time.split(' - ');
+    const start = timeParts[0].trim(), end = timeParts[1].trim();
+    const hours = calcHours(start, end).toFixed(2);
+    rows.push([`"${name}"`, 'Attnd-Attractions', `${start} - ${end}`, hours]);
+  }
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `fake-roster-${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function calcHours(start, end) {
+  function toDecimal(t) {
+    const m = t.match(/^(\d+):(\d+)(AM|PM)$/i);
+    if (!m) return 0;
+    let h = parseInt(m[1]);
+    const mn = parseInt(m[2]), ap = m[3].toUpperCase();
+    if (ap === 'PM' && h !== 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return h + mn / 60;
+  }
+  const s = toDecimal(start), e = toDecimal(end);
+  return e > s ? e - s : (e + 24) - s;
+}
+
+function showAlert(msg) {
+  const el = document.getElementById('main-alert');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideAlert() {
+  const el = document.getElementById('main-alert');
+  el.classList.remove('show');
+}
+</script>
+</body>
+</html>
