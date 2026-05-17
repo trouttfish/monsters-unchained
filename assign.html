@@ -373,15 +373,13 @@ function parseRosterCSV(file){
 }
 async function classifyAndRender(rows){
   const v=rows.filter(r=>r.startTime!=null);
-  const os=v.length?mode(v.map(r=>r.startTime)):null,ce=v.length?mode(v.map(r=>r.endTime)):null;
-  const pm=v.filter(r=>r.startTime>=12),pcs=pm.length?mode(pm.map(r=>r.startTime)):null;
+  const amW=v.filter(r=>r.startTime<12),pmW=v.filter(r=>r.startTime>=12);
+  const os=amW.length?mode(amW.map(r=>r.startTime)):null;
+  const ce=pmW.length?mode(pmW.map(r=>r.endTime)):null;
   for(const r of rows){
     if(r.startTime==null){r.shiftType='unknown';continue;}
-    if(r.startTime===os)r.shiftType='am-opener';
-    else if(r.startTime>os&&r.startTime<12)r.shiftType='am-breaker';
-    else if(r.startTime>=12&&r.endTime===ce)r.shiftType='pm-closer';
-    else if(r.startTime>=12&&r.startTime===pcs&&r.endTime<ce)r.shiftType='pm-breaker';
-    else r.shiftType='unknown';
+    if(r.startTime<12){r.shiftType=r.startTime===os?'am-opener':'am-breaker';}
+    else{r.shiftType=r.endTime===ce?'pm-closer':'pm-breaker';}
   }
   for(const r of rows){
     const ms=allWorkers.filter(w=>w.last_name.toLowerCase()===r.lastName.toLowerCase()&&w.first_name.charAt(0).toLowerCase()===r.firstName.charAt(0).toLowerCase());

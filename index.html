@@ -1261,6 +1261,21 @@ window.onload=()=>{renderSidebar([]);renderHistory();};
     <p style="color:#666;font-size:13px;margin:0 0 32px;">Monsters Unchained Rotation Builder — by Alex Troutt</p>
 
     <div class="patch-version">
+      <div class="patch-tag" style="background:#1a2a1a;color:#4caf7d;border-color:#4caf7d;">v2.0 — Daily Assignment System</div>
+      <ul class="patch-list">
+        <li>Phase 2 launched: <strong>Daily Assignment</strong> tool assigns real workers to rotation slots each day</li>
+        <li>History-aware algorithm prevents workers from repeating the same position or rotation within a week</li>
+        <li>YGOR/FRITZ slots filled by fairness queue — fewest total assignments first, oldest last as tiebreaker</li>
+        <li>CSV roster import parses Universal schedule exports and classifies workers by shift type automatically</li>
+        <li>Manual swap UI lets captains reassign any slot before confirming</li>
+        <li>All assignments saved to Supabase — full history tab for audit and review</li>
+        <li>Fake Roster Generator added for testing without a real schedule CSV</li>
+        <li>Export button added to Phase 1 — downloads rotation board as JSON for Phase 2 import</li>
+        <li>Site-wide navigation added — all three tools link to each other from every page</li>
+      </ul>
+    </div>
+
+    <div class="patch-version">
       <div class="patch-tag">v1.5 — UI Polish & Quality of Life</div>
       <ul class="patch-list">
         <li>Auto-retry: Generate button now retries up to 50 times automatically — no more hammering the button</li>
