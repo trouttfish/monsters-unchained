@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monsters Unchained — Daily Assignment</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#222;--border:#2e2e2e;--accent:#f0c040;--accent2:#e05a2b;--text:#f0ede8;--text-dim:#777;--green:#4caf7d;--red:#e05a2b;--blue:#5b8dee;--purple:#9b6dff;--orange:#f0932b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+#auth-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;width:360px;text-align:center}
+.auth-box h1{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--accent);margin-bottom:4px}
+.auth-box p{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:28px;text-transform:uppercase}
+.auth-error{color:var(--red);font-size:.72rem;margin-top:10px;display:none;font-family:'DM Mono',monospace}
+header{background:var(--surface);border-bottom:2px solid var(--accent);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+header h1{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--accent)}
+.subtitle{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase}
+.header-right{display:flex;align-items:center;gap:12px}
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 28px}
+.tab-btn{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;padding:12px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text-dim);cursor:pointer;transition:all .15s;margin-bottom:-1px}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none;padding:24px 28px;max-width:1200px}
+.tab-panel.active{display:block}
+.btn{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:1.5px;text-transform:uppercase;padding:8px 16px;border-radius:4px;border:none;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#000;font-weight:500}
+.btn-primary:hover{background:#f5d060}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--text-dim);color:var(--text)}
+.btn-sm{font-size:.58rem;padding:5px 10px}
+input[type=text],input[type=email],input[type=password],input[type=date],select{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:8px 12px;width:100%;outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--accent)}
+label{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px}
+.form-group{margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:16px}
+.alert{padding:10px 14px;border-radius:5px;font-size:.72rem;margin-bottom:14px;border-left:3px solid;font-family:'DM Mono',monospace;display:none}
+.alert.show{display:block}
+.alert-warn{background:rgba(240,192,64,.1);border-color:var(--accent);color:var(--accent)}
+.alert-error{background:rgba(224,90,43,.1);border-color:var(--red);color:var(--red)}
+.alert-success{background:rgba(76,175,125,.1);border-color:var(--green);color:var(--green)}
+.alert-info{background:rgba(91,141,238,.1);border-color:var(--blue);color:var(--blue)}
+.section-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:3px;color:var(--text-dim)}
+.step-badge{font-family:'DM Mono',monospace;font-size:.55rem;background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:3px;color:var(--text-dim);letter-spacing:1px}
+.worker-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.worker-table th{font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.worker-table td{padding:7px 10px;border-bottom:1px solid rgba(46,46,46,.5);vertical-align:middle}
+.worker-table tr:hover td{background:rgba(255,255,255,.02)}
+.cbo-badge{font-family:'DM Mono',monospace;font-size:.5rem;background:rgba(240,192,64,.15);color:var(--accent);padding:2px 6px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
+.inactive-badge{font-family:'DM Mono',monospace;font-size:.5rem;background:rgba(119,119,119,.15);color:var(--text-dim);padding:2px 6px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
+.classify-table{width:100%;border-collapse:collapse;font-size:.76rem}
+.classify-table th{font-family:'DM Mono',monospace;font-size:.54rem;letter-spacing:2px;color:var(--text-dim);padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.classify-table td{padding:5px 10px;border-bottom:1px solid rgba(46,46,46,.4)}
+.match-ok{color:var(--green);font-size:.7rem}
+.match-warn{color:var(--orange);font-size:.7rem}
+.match-miss{color:var(--red);font-size:.7rem}
+.opt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px}
+.opt-toggle{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s;user-select:none}
+.opt-toggle.yes{border-color:var(--green)}
+.opt-toggle-name{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:1px}
+.opt-toggle-state{font-family:'DM Mono',monospace;font-size:.55rem;padding:2px 8px;border-radius:3px}
+.opt-toggle.yes .opt-toggle-state{background:rgba(76,175,125,.2);color:var(--green)}
+.opt-toggle.no .opt-toggle-state{background:rgba(119,119,119,.15);color:var(--text-dim)}
+.fritz-row{display:flex;gap:10px;margin-top:10px}
+.fritz-btn{flex:1;padding:10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:1px;cursor:pointer;transition:all .15s;text-align:center}
+.fritz-btn.yes.active{border-color:var(--green);background:rgba(76,175,125,.12);color:var(--green)}
+.fritz-btn.no.active{border-color:var(--text-dim);background:rgba(119,119,119,.12);color:var(--text-dim)}
+.assign-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px}
+.assign-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.assign-card.cbo-card{border-color:var(--accent2)}
+.assign-card-header{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.02)}
+.assign-card-label{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:2px}
+.assign-card-shift{font-family:'DM Mono',monospace;font-size:.5rem;padding:2px 6px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
+.shift-am{background:rgba(76,175,125,.2);color:var(--green)}
+.shift-pm{background:rgba(240,192,64,.15);color:var(--accent)}
+.assign-slots{padding:8px}
+.assign-slot{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;margin-bottom:3px;border:1px solid var(--border);background:var(--surface2);min-height:34px;transition:all .15s}
+.assign-slot.flag-soft{border-color:rgba(245,197,24,.4);background:rgba(245,197,24,.05)}
+.assign-slot.flag-short{border-color:rgba(224,90,43,.4);background:rgba(224,90,43,.05)}
+.assign-slot.flag-unstaffed{opacity:.45}
+.assign-slot.flag-non-cbo{border-color:rgba(240,147,43,.4);background:rgba(240,147,43,.05)}
+.assign-slot.selected{border-color:var(--accent);background:rgba(240,192,64,.1);box-shadow:0 0 0 1px var(--accent)}
+.assign-slot-pos{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text-dim);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.assign-slot-worker{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text);cursor:pointer;white-space:nowrap;padding:2px 6px;border-radius:3px;border:1px solid transparent;transition:all .15s}
+.assign-slot-worker:hover{border-color:var(--accent);color:var(--accent)}
+.assign-slot-worker.unstaffed{color:var(--text-dim);font-style:italic;cursor:default}
+.assign-slot-worker.empty{color:var(--red)}
+.assign-breaker{padding:6px 8px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:8px}
+.breaker-label{font-family:'DM Mono',monospace;font-size:.55rem;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
+.ygor-card{background:var(--surface);border:1px solid var(--purple);border-radius:8px;padding:14px 16px;margin-bottom:16px;max-width:340px}
+.ygor-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:3px;color:var(--purple);margin-bottom:10px}
+.ygor-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(46,46,46,.5)}
+.ygor-row:last-child{border-bottom:none}
+.ygor-pos{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--text-dim);width:80px;flex-shrink:0}
+.extras-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px}
+.extras-title{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px}
+.extras-chips{display:flex;flex-wrap:wrap;gap:8px}
+.extra-chip{font-family:'DM Mono',monospace;font-size:.65rem;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 10px;color:var(--text-dim)}
+.warn-list{background:rgba(240,192,64,.05);border:1px solid rgba(240,192,64,.2);border-radius:6px;padding:12px 14px;margin-bottom:14px}
+.warn-list-title{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.warn-item{font-size:.72rem;color:var(--text-dim);padding:2px 0;line-height:1.5}
+.unmatched-box{background:rgba(224,90,43,.05);border:1px solid rgba(224,90,43,.3);border-radius:6px;padding:12px 14px;margin-bottom:14px}
+.unmatched-title{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:8px}
+.unmatched-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(224,90,43,.1);flex-wrap:wrap}
+.unmatched-row:last-child{border-bottom:none}
+.unmatched-name{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:500}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:28px;width:420px;max-width:95vw;max-height:90vh;overflow-y:auto;position:relative}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;color:var(--accent);margin-bottom:20px}
+.modal-close{position:absolute;top:12px;right:14px;background:transparent;border:none;color:var(--text-dim);font-size:18px;cursor:pointer}
+.search-input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:7px 12px;outline:none;width:260px}
+.search-input:focus{border-color:var(--accent)}
+.toggle-wrap{display:flex;align-items:center;gap:8px;cursor:pointer}
+.toggle{width:36px;height:20px;background:var(--border);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(16px)}
+.upload-area{border:2px dashed var(--border);border-radius:8px;padding:30px;text-align:center;cursor:pointer;transition:border-color .2s}
+.upload-area:hover,.upload-area.dragover{border-color:var(--accent)}
+.upload-area p{font-size:.78rem;color:var(--text-dim);margin-top:8px}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0 14px}
+.divider span{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:3px;color:var(--text-dim);white-space:nowrap}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="auth-overlay">
+  <div class="auth-box">
+    <h1>Monsters Unchained</h1>
+    <p>Assignment System &mdash; Captain Login</p>
+    <div class="form-group"><label>Email</label><input type="email" id="auth-email" value="captains@monstersunchained.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="auth-password" placeholder="Enter password"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="doLogin()">Sign In</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <div><h1>Monsters Unchained</h1><div class="subtitle">Daily Assignment</div></div>
+    <div class="header-right">
+      <span id="header-date" style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text-dim)"></span>
+      <button class="btn btn-secondary btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('assignment',this)">Today's Assignment</button>
+    <button class="tab-btn" onclick="showTab('workers',this)">Workers</button>
+    <button class="tab-btn" onclick="showTab('history',this)">History</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-assignment">
+    <div class="card" id="rotation-card">
+      <div class="section-head"><div class="step-badge">STEP 1</div><div class="section-title">Weekly Rotation</div></div>
+      <div id="rotation-status"><p style="font-size:.78rem;color:var(--text-dim);margin-bottom:12px">No rotation loaded for this week. Import from Phase 1 to continue.</p></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="document.getElementById('rotation-file').click()">Import Rotation JSON</button>
+        <button class="btn btn-secondary" onclick="loadRotationFromDB()">Load This Week from DB</button>
+        <input type="file" id="rotation-file" accept=".json" style="display:none" onchange="handleRotationFile(this)">
+      </div>
+    </div>
+
+    <div class="card" id="roster-card" style="display:none">
+      <div class="section-head"><div class="step-badge">STEP 2</div><div class="section-title">Upload Today's Roster</div></div>
+      <div class="upload-area" id="roster-drop" onclick="document.getElementById('roster-file').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleRosterDrop(event)">
+        <div style="font-size:1.5rem;opacity:.3">&#128203;</div>
+        <p>Click or drag Universal CSV export here</p>
+        <p style="font-size:.65rem;margin-top:4px;font-family:'DM Mono',monospace">Filter: Attnd-Attractions &bull; Format: Last, First M</p>
+      </div>
+      <input type="file" id="roster-file" accept=".csv" style="display:none" onchange="handleRosterFile(this)">
+    </div>
+
+    <div class="card" id="classify-card" style="display:none">
+      <div class="section-head"><div class="step-badge">STEP 3</div><div class="section-title">Shift Classification</div><button class="btn btn-secondary btn-sm" onclick="document.getElementById('roster-file').click()">Re-upload</button></div>
+      <div id="classify-alert" class="alert alert-info"></div>
+      <div style="overflow-x:auto">
+        <table class="classify-table"><thead><tr><th>Name</th><th>Start</th><th>End</th><th>Classification</th><th>DB Match</th></tr></thead><tbody id="classify-body"></tbody></table>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="showSetupPanel()">Classifications Look Good &rarr;</button></div>
+    </div>
+
+    <div class="card" id="setup-card" style="display:none">
+      <div class="section-head"><div class="step-badge">STEP 4</div><div class="section-title">Pre-Setup</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div>
+          <label>Is FRITZ staffed today?</label>
+          <div class="fritz-row">
+            <button class="fritz-btn yes active" id="fritz-yes" onclick="setFritz(true)">Yes &mdash; Staff Fritz</button>
+            <button class="fritz-btn no" id="fritz-no" onclick="setFritz(false)">No &mdash; Skip Fritz</button>
+          </div>
+        </div>
+        <div><label>Optional positions staffed today:</label><div class="opt-grid" id="opt-grid"></div></div>
+      </div>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="runAssignment()">&#9654; Run Assignment</button></div>
+    </div>
+
+    <div id="output-section" style="display:none">
+      <div id="output-alert" class="alert"></div>
+      <div id="unmatched-box"></div>
+      <div id="warn-box"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+        <button class="btn btn-secondary" onclick="runAssignment()">&#8634; Regenerate</button>
+        <button class="btn btn-primary" onclick="confirmSave()" id="confirm-btn">&#10003; Confirm &amp; Save</button>
+        <span style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--green);margin-left:4px" id="saved-indicator"></span>
+      </div>
+      <div class="divider"><span>AM SHIFT</span></div>
+      <div class="assign-grid" id="am-output"></div>
+      <div id="am-ygor"></div>
+      <div id="am-extras"></div>
+      <div class="divider"><span>PM SHIFT</span></div>
+      <div class="assign-grid" id="pm-output"></div>
+      <div id="pm-ygor"></div>
+      <div id="pm-extras"></div>
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button class="btn btn-secondary" onclick="runAssignment()">&#8634; Regenerate</button>
+        <button class="btn btn-primary" onclick="confirmSave()">&#10003; Confirm &amp; Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-workers">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:3px">Worker Roster</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('csv-seed-file').click()">Bulk CSV Import</button>
+        <input type="file" id="csv-seed-file" accept=".csv" style="display:none" onchange="handleWorkerCSV(this)">
+        <button class="btn btn-primary btn-sm" onclick="openWorkerModal()">+ Add Worker</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+      <input class="search-input" type="text" id="worker-search" placeholder="Search name..." oninput="renderWorkers()">
+      <select id="filter-active" style="width:auto;padding:7px 12px" onchange="renderWorkers()"><option value="active">Active Only</option><option value="all">All Workers</option><option value="inactive">Inactive Only</option></select>
+      <select id="filter-cbo" style="width:auto;padding:7px 12px" onchange="renderWorkers()"><option value="all">All</option><option value="cbo">CBO Only</option><option value="non-cbo">Non-CBO</option></select>
+      <span id="worker-count" style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text-dim)"></span>
+    </div>
+    <div id="workers-alert" class="alert"></div>
+    <div style="overflow-x:auto">
+      <table class="worker-table"><thead><tr><th>#</th><th>Name</th><th>CBO</th><th>Status</th><th>Actions</th></tr></thead><tbody id="worker-body"></tbody></table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-history">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px">Assignment History</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px">
+      <div style="flex:1;min-width:220px"><div class="form-group"><label>View by date</label><div style="display:flex;gap:8px"><input type="date" id="hist-date" style="flex:1"><button class="btn btn-secondary btn-sm" onclick="loadHistoryByDate()">Load</button></div></div></div>
+      <div style="flex:1;min-width:220px"><div class="form-group"><label>View by worker</label><div style="display:flex;gap:8px"><select id="hist-worker" style="flex:1"><option value="">Select worker...</option></select><button class="btn btn-secondary btn-sm" onclick="loadHistoryByWorker()">Load</button></div></div></div>
+    </div>
+    <div id="history-output"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="worker-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeWorkerModal()">&#10005;</button>
+    <div class="modal-title" id="worker-modal-title">Add Worker</div>
+    <div class="form-group"><label>First Name</label><input type="text" id="wm-first" placeholder="First"></div>
+    <div class="form-group"><label>Last Name</label><input type="text" id="wm-last" placeholder="Last"></div>
+    <div class="form-group" style="display:flex;align-items:center;gap:12px">
+      <label style="margin:0">CBO Certified</label>
+      <div class="toggle-wrap" onclick="toggleWmCbo()"><div class="toggle" id="wm-cbo-toggle"></div><span style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text-dim)" id="wm-cbo-label">No</span></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveWorker()">Save</button>
+      <button class="btn btn-secondary" onclick="closeWorkerModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ambig-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAmbigModal()">&#10005;</button>
+    <div class="modal-title">Resolve Ambiguous Match</div>
+    <p style="font-size:.78rem;color:var(--text-dim);margin-bottom:14px" id="ambig-desc"></p>
+    <div id="ambig-options"></div>
+    <button class="btn btn-secondary" style="margin-top:10px;width:100%" onclick="skipAmbig()">Skip &mdash; assign as temp worker</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ── CONFIG — replace these two lines with your Supabase values ──
+const SUPABASE_URL = 'https://degxhripifhimqzahsrg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_URsupyGAoMjN3qBzoq2RzQ_ERih5Ffs';
+// ───────────────────────────────────────────────────────────────
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentRotation=null,rosterWorkers=[],allWorkers=[],fritzStaffed=true,unstaffedOptionals=new Set(),lastResult=null,savedToday=false,swapSource=null,editingWorkerId=null,wmCbo=false,ambigCurrent=null;
+const OPTIONAL_POSITIONS=['SINGLES LOCKERS','STAIRCASE ROAMER','MERGE','PULSE','UNLOAD 2'];
+
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function mode(arr){const f={};for(const v of arr)f[v]=(f[v]||0)+1;return parseFloat(Object.entries(f).sort((a,b)=>b[1]-a[1])[0][0]);}
+function parseTime(s){const m=s.trim().match(/^(\d+):(\d+)(AM|PM)$/i);if(!m)return null;let h=parseInt(m[1]);const mn=parseInt(m[2]),ap=m[3].toUpperCase();if(ap==='PM'&&h!==12)h+=12;if(ap==='AM'&&h===12)h=0;return h+mn/60;}
+function fmtTime(d){if(d==null)return'?';const h=Math.floor(d),m=Math.round((d-h)*60),ap=h>=12?'PM':'AM',h2=h===0?12:h>12?h-12:h;return`${h2}:${String(m).padStart(2,'0')}${ap}`;}
+function getWeekStart(){const d=new Date();d.setDate(d.getDate()-d.getDay());return d.toISOString().split('T')[0];}
+function todayStr(){return new Date().toLocaleDateString('en-CA');}
+function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.textContent=msg;el.className=`alert alert-${type}${msg?' show':''}`;}
+
+async function doLogin(){
+  const email=document.getElementById('auth-email').value.trim(),pass=document.getElementById('auth-password').value,err=document.getElementById('auth-error');
+  err.style.display='none';
+  const{error}=await db.auth.signInWithPassword({email,password:pass});
+  if(error){err.textContent=error.message;err.style.display='block';}else initApp();
+}
+async function doLogout(){await db.auth.signOut();document.getElementById('app').style.display='none';document.getElementById('auth-overlay').style.display='flex';}
+document.getElementById('auth-password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+async function initApp(){
+  document.getElementById('auth-overlay').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
+  buildOptGrid();await loadWorkers();await tryLoadRotationFromDB();
+  populateHistoryWorkerSelect();document.getElementById('hist-date').value=todayStr();
+}
+db.auth.onAuthStateChange((ev,s)=>{if(s)initApp();});
+db.auth.getSession().then(({data:{session}})=>{if(session)initApp();});
+
+function showTab(name,btn){document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById(`tab-${name}`).classList.add('active');btn.classList.add('active');}
+
+async function tryLoadRotationFromDB(){const{data}=await db.from('weekly_rotations').select('*').eq('week_start',getWeekStart()).maybeSingle();if(data)setRotation(data.rotation_json);}
+async function loadRotationFromDB(){await tryLoadRotationFromDB();if(!currentRotation)showAlert('output-alert','No rotation found for this week. Import a JSON file from Phase 1.','warn');}
+function handleRotationFile(input){
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=async e=>{try{const j=JSON.parse(e.target.result);setRotation(j);const w=j.weekStart||getWeekStart();await db.from('weekly_rotations').upsert({week_start:w,rotation_json:j},{onConflict:'week_start'});}catch(err){showAlert('output-alert','Invalid JSON: '+err.message,'error');}};
+  r.readAsText(file);input.value='';
+}
+function setRotation(json){
+  currentRotation=json;
+  const w=json.weekStart||'?',c=json.rotations?json.rotations.filter(r=>r.type!=='special').length:0;
+  document.getElementById('rotation-status').innerHTML=`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px">
+    <div><div style="font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase">Week Start</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--accent)">${w}</div></div>
+    <div><div style="font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase">Rotations</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--accent)">${c}</div></div>
+    <div><div style="font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase">Status</div><div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--green);margin-top:4px">&#10003; Loaded</div></div>
+  </div>`;
+  document.getElementById('roster-card').style.display='block';
+}
+
+function handleRosterDrop(e){e.preventDefault();document.getElementById('roster-drop').classList.remove('dragover');const f=e.dataTransfer.files[0];if(f)parseRosterCSV(f);}
+function handleRosterFile(input){const f=input.files[0];if(f)parseRosterCSV(f);input.value='';}
+function parseCSVLine(line){const r=[];let c='',q=false;for(const ch of line){if(ch==='"'){q=!q;continue;}if(ch===','&&!q){r.push(c);c='';continue;}c+=ch;}r.push(c);return r;}
+function parseRosterCSV(file){
+  const rd=new FileReader();
+  rd.onload=e=>{
+    const lines=e.target.result.split('\n').map(l=>l.trim()).filter(Boolean);if(!lines.length)return;
+    const hdr=lines[0].split(',').map(s=>s.replace(/"/g,'').trim().toLowerCase());
+    const nc=hdr.findIndex(h=>h.includes('name')),dc=hdr.findIndex(h=>h.includes('dept')||h.includes('department'));
+    const rows=[];
+    for(let i=1;i<lines.length;i++){
+      const cols=parseCSVLine(lines[i]);if(!cols.length)continue;
+      if(dc>=0){const dept=(cols[dc]||'').replace(/"/g,'').trim();if(!dept.toLowerCase().includes('attnd')&&!dept.toLowerCase().includes('attractions'))continue;}
+      const raw=(cols[nc>=0?nc:0]||'').replace(/"/g,'').trim();if(!raw||raw.toLowerCase()==='name')continue;
+      const np=raw.split(','),last=(np[0]||'').trim(),fp=(np[1]||'').trim().split(' '),first=fp[0]||'';
+      let st=null,et=null;
+      for(const col of cols){const v=(col||'').replace(/"/g,'').trim();const tm=v.match(/(\d+:\d+(?:AM|PM))\s*[-–]\s*(\d+:\d+(?:AM|PM))/i);if(tm){st=parseTime(tm[1]);et=parseTime(tm[2]);break;}}
+      if(!last||!first)continue;
+      rows.push({rawName:raw,lastName:last,firstName:first,startTime:st,endTime:et});
+    }
+    if(!rows.length){showAlert('classify-alert','No Attnd-Attractions workers found. Check CSV format.','error');document.getElementById('classify-card').style.display='block';return;}
+    classifyAndRender(rows);
+  };
+  rd.readAsText(file);
+}
+async function classifyAndRender(rows){
+  const v=rows.filter(r=>r.startTime!=null);
+  const os=v.length?mode(v.map(r=>r.startTime)):null,ce=v.length?mode(v.map(r=>r.endTime)):null;
+  const pm=v.filter(r=>r.startTime>=12),pcs=pm.length?mode(pm.map(r=>r.startTime)):null;
+  for(const r of rows){
+    if(r.startTime==null){r.shiftType='unknown';continue;}
+    if(r.startTime===os)r.shiftType='am-opener';
+    else if(r.startTime>os&&r.startTime<12)r.shiftType='am-breaker';
+    else if(r.startTime>=12&&r.endTime===ce)r.shiftType='pm-closer';
+    else if(r.startTime>=12&&r.startTime===pcs&&r.endTime<ce)r.shiftType='pm-breaker';
+    else r.shiftType='unknown';
+  }
+  for(const r of rows){
+    const ms=allWorkers.filter(w=>w.last_name.toLowerCase()===r.lastName.toLowerCase()&&w.first_name.charAt(0).toLowerCase()===r.firstName.charAt(0).toLowerCase());
+    if(ms.length===1){r.dbWorker=ms[0];r.matchType='exact';}else if(ms.length>1){r.dbWorker=null;r.matchType='ambiguous';r.ambigCandidates=ms;}else{r.dbWorker=null;r.matchType='unmatched';}
+    r.key=r.dbWorker?r.dbWorker.id:`temp-${Math.random().toString(36).slice(2)}`;
+    r.cboCertified=r.dbWorker?r.dbWorker.cbo_certified:false;
+    r.displayName=r.dbWorker?`${r.dbWorker.first_name} ${r.dbWorker.last_name.charAt(0)}.`:`${r.firstName} ${r.lastName.charAt(0)}. (?)`;
+  }
+  rosterWorkers=rows;document.getElementById('classify-card').style.display='block';
+  const lb={'am-opener':'AM Opener','am-breaker':'AM Breaker','pm-closer':'PM Closer','pm-breaker':'PM Breaker','unknown':'Unknown'};
+  const ic={'exact':'<span class="match-ok">&#10003;</span>','ambiguous':'<span class="match-warn">&#9888; Ambiguous</span>','unmatched':'<span class="match-miss">&#10007; New</span>'};
+  document.getElementById('classify-body').innerHTML=rows.map((r,i)=>`<tr><td style="font-family:'DM Mono',monospace;font-size:.7rem">${r.rawName}</td><td style="font-family:'DM Mono',monospace;font-size:.65rem">${fmtTime(r.startTime)}</td><td style="font-family:'DM Mono',monospace;font-size:.65rem">${fmtTime(r.endTime)}</td><td><select style="padding:3px 6px;font-size:.65rem;width:auto" onchange="rosterWorkers[${i}].shiftType=this.value">${['am-opener','am-breaker','pm-closer','pm-breaker','unknown'].map(st=>`<option value="${st}"${r.shiftType===st?' selected':''}>${lb[st]}</option>`).join('')}</select></td><td>${ic[r.matchType]||''}</td></tr>`).join('');
+  const c={'am-opener':0,'am-breaker':0,'pm-closer':0,'pm-breaker':0};for(const r of rows)if(c[r.shiftType]!==undefined)c[r.shiftType]++;
+  showAlert('classify-alert',`${rows.length} workers: ${c['am-opener']} AM Openers, ${c['am-breaker']} AM Breakers, ${c['pm-closer']} PM Closers, ${c['pm-breaker']} PM Breakers`,'info');
+}
+
+function buildOptGrid(){document.getElementById('opt-grid').innerHTML=OPTIONAL_POSITIONS.map(p=>`<div class="opt-toggle yes" id="opt-${p.replace(/ /g,'_')}" onclick="toggleOpt('${p}')"><span class="opt-toggle-name">${p}</span><span class="opt-toggle-state">YES</span></div>`).join('');}
+function toggleOpt(p){const el=document.getElementById(`opt-${p.replace(/ /g,'_')}`);if(unstaffedOptionals.has(p)){unstaffedOptionals.delete(p);el.className='opt-toggle yes';el.querySelector('.opt-toggle-state').textContent='YES';}else{unstaffedOptionals.add(p);el.className='opt-toggle no';el.querySelector('.opt-toggle-state').textContent='NO';}}
+function setFritz(v){fritzStaffed=v;document.getElementById('fritz-yes').className=`fritz-btn yes${v?' active':''}`;document.getElementById('fritz-no').className=`fritz-btn no${!v?' active':''}`;}
+function showSetupPanel(){document.getElementById('setup-card').style.display='block';document.getElementById('setup-card').scrollIntoView({behavior:'smooth',block:'start'});}
+
+async function runAssignment(){
+  if(!currentRotation){alert('Import a rotation first.');return;}
+  if(!rosterWorkers.length){alert('Upload a roster first.');return;}
+  const ambig=rosterWorkers.filter(r=>r.matchType==='ambiguous'&&!r.resolved);
+  if(ambig.length){openAmbigModal(ambig[0]);return;}
+  document.getElementById('output-section').style.display='block';
+  document.getElementById('am-output').innerHTML='<div style="color:var(--text-dim);font-size:.75rem;padding:10px">Computing...</div>';
+  const today=todayStr(),ws=getWeekStart();
+  const[{data:wh},{data:yh}]=await Promise.all([db.from('assignments').select('worker_id,position_id,rotation_label').eq('week_start',ws),db.from('assignments').select('worker_id,assignment_date,role').in('role',['ygor','fritz'])]);
+  const am=doShift('AM',rosterWorkers,wh||[],yh||[]),pm=doShift('PM',rosterWorkers,wh||[],yh||[]);
+  lastResult={am,pm,today,weekStart:ws};renderOutput(am,pm);savedToday=false;document.getElementById('saved-indicator').textContent='';
+  document.getElementById('output-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function doShift(shift,roster,wh,yh){
+  const isAM=shift==='AM';
+  const op=shuffle(roster.filter(r=>r.shiftType===(isAM?'am-opener':'pm-closer')));
+  const bp=shuffle(roster.filter(r=>r.shiftType===(isAM?'am-breaker':'pm-breaker')));
+  const warns=[],rots=currentRotation.rotations.filter(r=>r.type!=='special');
+  const hadP=(w,p)=>!w.dbWorker?false:wh.some(a=>a.worker_id===w.dbWorker.id&&a.position_id===p);
+  const hadR=(w,l)=>!w.dbWorker?false:wh.some(a=>a.worker_id===w.dbWorker.id&&a.rotation_label===l);
+  function pick(pool,pid,rl,cbo){
+    const el=pool.filter(w=>!(cbo&&!w.cboCertified)&&!hadP(w,pid));
+    const pf=shuffle(el.filter(w=>!hadR(w,rl))),any=shuffle(el);
+    let ch=null,fl=null;if(pf.length)ch=pf[0];else if(any.length){ch=any[0];fl='soft';}
+    if(ch){const i=pool.indexOf(ch);if(i>=0)pool.splice(i,1);}
+    return{worker:ch,flag:fl};
+  }
+  const cards=[];
+  for(const rot of rots.filter(r=>r.cboRequired)){
+    const card={rotation:rot,mainSlots:[],breakerSlot:null};
+    for(const slot of rot.slots){
+      if(unstaffedOptionals.has(slot.id)){card.mainSlots.push({slot,worker:null,flag:'unstaffed'});continue;}
+      const{worker,flag}=pick(op,slot.id,rot.label,true);
+      if(!worker)warns.push(`Not enough CBO workers for ${slot.id}`);
+      card.mainSlots.push({slot,worker,flag:flag||(worker?null:'short')});
+    }
+    let b=pick(bp,'BREAKER',rot.label,true);if(!b.worker){b=pick(bp,'BREAKER',rot.label,false);if(b.worker){b.flag='non-cbo';warns.push(`Non-CBO on CBO breaker in ${rot.label}`);}}
+    card.breakerSlot=b;cards.push(card);
+  }
+  function fair(pool,role){return[...pool].sort((a,b)=>{if(!a.dbWorker)return 1;if(!b.dbWorker)return-1;const aH=yh.filter(h=>h.worker_id===a.dbWorker.id&&h.role===role),bH=yh.filter(h=>h.worker_id===b.dbWorker.id&&h.role===role);if(aH.length!==bH.length)return aH.length-bH.length;const aL=aH.reduce((m,h)=>h.assignment_date>m?h.assignment_date:m,'0000-00-00'),bL=bH.reduce((m,h)=>h.assignment_date>m?h.assignment_date:m,'0000-00-00');return aL<bL?-1:1;});}
+  let yW=null,fW=null;const ys=fair(op,'ygor');if(ys.length){yW=ys[0];op.splice(op.indexOf(yW),1);}
+  if(fritzStaffed){const fs=fair(op,'fritz');if(fs.length){fW=fs[0];op.splice(op.indexOf(fW),1);}}
+  for(const rot of rots.filter(r=>!r.cboRequired)){
+    const card={rotation:rot,mainSlots:[],breakerSlot:null};
+    for(const slot of rot.slots){
+      if(unstaffedOptionals.has(slot.id)){card.mainSlots.push({slot,worker:null,flag:'unstaffed'});continue;}
+      const{worker,flag}=pick(op,slot.id,rot.label,false);
+      card.mainSlots.push({slot,worker,flag:flag||(worker?null:'short')});
+      if(!worker)warns.push(`Slot ${slot.id} in ${rot.label} unfilled`);
+    }
+    card.breakerSlot=pick(bp,'BREAKER',rot.label,false);cards.push(card);
+  }
+  return{shift,assignmentCards:cards,ygorWorker:yW,fritzWorker:fW,extras:[...op],warnings:warns};
+}
+
+function renderOutput(am,pm){
+  renderShift('am',am);renderShift('pm',pm);
+  const w=[...(am.warnings||[]),...(pm.warnings||[])];
+  document.getElementById('warn-box').innerHTML=w.length?`<div class="warn-list"><div class="warn-list-title">&#9888; Warnings (${w.length})</div>${w.map(x=>`<div class="warn-item">${x}</div>`).join('')}</div>`:'';
+  const u=rosterWorkers.filter(r=>r.matchType==='unmatched');
+  document.getElementById('unmatched-box').innerHTML=u.length?`<div class="unmatched-box"><div class="unmatched-title">&#10007; ${u.length} roster name(s) not matched</div>${u.map(r=>`<div class="unmatched-row"><span class="unmatched-name">${r.rawName}</span><span style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text-dim)">(assigned as temp)</span></div>`).join('')}</div>`:'';
+}
+function renderShift(key,res){
+  document.getElementById(`${key}-output`).innerHTML=res.assignmentCards.map((card,ri)=>`
+    <div class="assign-card${card.rotation.cboRequired?' cbo-card':''}">
+      <div class="assign-card-header"><span class="assign-card-label">${card.rotation.label}</span><span class="assign-card-shift shift-${key}">${res.shift}</span></div>
+      <div class="assign-slots">${card.mainSlots.map((ms,si)=>`
+        <div class="assign-slot${ms.flag?' flag-'+ms.flag:''}" id="slot-${key}-${ri}-main-${si}">
+          <span class="assign-slot-pos">${ms.slot.id}</span>
+          <span class="assign-slot-worker${ms.flag==='unstaffed'?' unstaffed':ms.worker?'':' empty'}" onclick="${ms.flag!=='unstaffed'?`selectSlot('${key}',${ri},'main',${si})`:''}">${ms.flag==='unstaffed'?'[not staffed]':ms.worker?ms.worker.displayName:'[UNFILLED]'}</span>
+        </div>`).join('')}</div>
+      ${card.breakerSlot?`<div class="assign-breaker" id="slot-${key}-${ri}-breaker-0"><span class="breaker-label">Breaker</span><span class="assign-slot-worker${card.breakerSlot.worker?'':' empty'}" onclick="${card.breakerSlot.worker?`selectSlot('${key}',${ri},'breaker',0)`:''}">${card.breakerSlot.worker?card.breakerSlot.worker.displayName:'[none]'}</span></div>`:''}
+    </div>`).join('');
+  document.getElementById(`${key}-ygor`).innerHTML=`<div class="ygor-card"><div class="ygor-title">YGOR / SPECIAL</div>
+    <div class="ygor-row"><span class="ygor-pos">YGOR</span><span class="assign-slot-worker" onclick="selectSlot('${key}',-1,'ygor',0)">${res.ygorWorker?res.ygorWorker.displayName:'[unfilled]'}</span></div>
+    <div class="ygor-row"><span class="ygor-pos">FRITZ</span><span class="${fritzStaffed?'assign-slot-worker':'assign-slot-worker unstaffed'}" onclick="${fritzStaffed?`selectSlot('${key}',-1,'fritz',0)`:''}">${fritzStaffed?(res.fritzWorker?res.fritzWorker.displayName:'[unfilled]'):'[not staffed]'}</span></div>
+  </div>`;
+  document.getElementById(`${key}-extras`).innerHTML=res.extras.length?`<div class="extras-box"><div class="extras-title">Extras (${res.shift}) &mdash; ${res.extras.length} on standby</div><div class="extras-chips">${res.extras.map(w=>`<div class="extra-chip">${w.displayName}</div>`).join('')}</div></div>`:'';
+}
+
+function selectSlot(sh,ri,tp,si){
+  const k=`${sh}-${ri}-${tp}-${si}`;
+  if(!swapSource){swapSource={sh,ri,tp,si,k};const el=document.getElementById(`slot-${k}`);if(el)el.classList.add('selected');return;}
+  if(swapSource.k===k){clearSwap();return;}
+  const wA=getW(swapSource),wB=getW({sh,ri,tp,si});setW(swapSource,wB);setW({sh,ri,tp,si},wA);clearSwap();renderOutput(lastResult.am,lastResult.pm);
+}
+function clearSwap(){if(swapSource){const el=document.getElementById(`slot-${swapSource.k}`);if(el)el.classList.remove('selected');}swapSource=null;}
+function getW({sh,ri,tp,si}){const r=sh==='am'?lastResult.am:lastResult.pm;if(ri===-1)return tp==='ygor'?r.ygorWorker:r.fritzWorker;const c=r.assignmentCards[ri];return tp==='main'?c.mainSlots[si]?.worker:c.breakerSlot?.worker;}
+function setW({sh,ri,tp,si},w){const r=sh==='am'?lastResult.am:lastResult.pm;if(ri===-1){if(tp==='ygor')r.ygorWorker=w;else r.fritzWorker=w;return;}const c=r.assignmentCards[ri];if(tp==='main'){if(c.mainSlots[si])c.mainSlots[si].worker=w;}else if(c.breakerSlot)c.breakerSlot.worker=w;}
+
+async function confirmSave(){
+  if(savedToday&&!confirm('Assignment already saved today. Overwrite?'))return;
+  if(savedToday)await db.from('assignments').delete().eq('assignment_date',lastResult.today);
+  const btn=document.getElementById('confirm-btn');btn.disabled=true;btn.textContent='Saving...';
+  const rows=[];
+  const push=res=>{
+    for(const c of res.assignmentCards){for(const ms of c.mainSlots){if(!ms.worker||ms.flag==='unstaffed')continue;rows.push({worker_id:ms.worker.dbWorker?.id||null,assignment_date:lastResult.today,shift:res.shift,rotation_label:c.rotation.label,position_id:ms.slot.id,role:'main',week_start:lastResult.weekStart});}if(c.breakerSlot?.worker)rows.push({worker_id:c.breakerSlot.worker.dbWorker?.id||null,assignment_date:lastResult.today,shift:res.shift,rotation_label:c.rotation.label,position_id:'BREAKER',role:'breaker',week_start:lastResult.weekStart});}
+    if(res.ygorWorker)rows.push({worker_id:res.ygorWorker.dbWorker?.id||null,assignment_date:lastResult.today,shift:res.shift,rotation_label:'YGOR / SPECIAL',position_id:'YGOR',role:'ygor',week_start:lastResult.weekStart});
+    if(res.fritzWorker&&fritzStaffed)rows.push({worker_id:res.fritzWorker.dbWorker?.id||null,assignment_date:lastResult.today,shift:res.shift,rotation_label:'YGOR / SPECIAL',position_id:'FRITZ',role:'fritz',week_start:lastResult.weekStart});
+    for(const ex of res.extras)rows.push({worker_id:ex.dbWorker?.id||null,assignment_date:lastResult.today,shift:res.shift,rotation_label:'EXTRA',position_id:'EXTRA',role:'extra',week_start:lastResult.weekStart});
+  };
+  push(lastResult.am);push(lastResult.pm);
+  const{error}=await db.from('assignments').insert(rows);
+  if(error){alert('Save failed: '+error.message);btn.disabled=false;btn.textContent='&#10003; Confirm & Save';return;}
+  savedToday=true;btn.disabled=false;btn.textContent='&#10003; Confirm & Save';document.getElementById('saved-indicator').textContent='&#10003; Saved at '+new Date().toLocaleTimeString();
+}
+
+async function loadWorkers(){const{data}=await db.from('workers').select('*').order('last_name');allWorkers=data||[];renderWorkers();}
+function renderWorkers(){
+  const s=(document.getElementById('worker-search')?.value||'').toLowerCase(),af=document.getElementById('filter-active')?.value||'active',cf=document.getElementById('filter-cbo')?.value||'all';
+  const f=allWorkers.filter(w=>{if(af==='active'&&!w.active)return false;if(af==='inactive'&&w.active)return false;if(cf==='cbo'&&!w.cbo_certified)return false;if(cf==='non-cbo'&&w.cbo_certified)return false;return!s||`${w.first_name} ${w.last_name}`.toLowerCase().includes(s);});
+  document.getElementById('worker-count').textContent=`${f.length} workers`;
+  document.getElementById('worker-body').innerHTML=f.map((w,i)=>`<tr><td style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text-dim)">${i+1}</td><td>${w.last_name}, ${w.first_name}</td><td>${w.cbo_certified?'<span class="cbo-badge">CBO</span>':''}</td><td>${w.active?'':'<span class="inactive-badge">Inactive</span>'}</td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-secondary btn-sm" onclick="openWorkerModal('${w.id}')">Edit</button><button class="btn btn-secondary btn-sm" onclick="toggleActive('${w.id}',${w.active})">${w.active?'Deactivate':'Reactivate'}</button></td></tr>`).join('');
+}
+function openWorkerModal(id){editingWorkerId=id||null;wmCbo=false;document.getElementById('worker-modal-title').textContent=id?'Edit Worker':'Add Worker';const w=id?allWorkers.find(x=>x.id===id):null;document.getElementById('wm-first').value=w?w.first_name:'';document.getElementById('wm-last').value=w?w.last_name:'';wmCbo=w?w.cbo_certified:false;updateWmCbo();document.getElementById('worker-modal').classList.add('open');}
+function closeWorkerModal(){document.getElementById('worker-modal').classList.remove('open');}
+function toggleWmCbo(){wmCbo=!wmCbo;updateWmCbo();}
+function updateWmCbo(){document.getElementById('wm-cbo-toggle').className=`toggle${wmCbo?' on':''}`;document.getElementById('wm-cbo-label').textContent=wmCbo?'Yes':'No';}
+async function saveWorker(){const f=document.getElementById('wm-first').value.trim(),l=document.getElementById('wm-last').value.trim();if(!f||!l){alert('Enter first and last name.');return;}const p={first_name:f,last_name:l,cbo_certified:wmCbo};const{error}=editingWorkerId?await db.from('workers').update(p).eq('id',editingWorkerId):await db.from('workers').insert({...p,active:true});if(error){alert('Error: '+error.message);return;}closeWorkerModal();await loadWorkers();}
+async function toggleActive(id,cur){await db.from('workers').update({active:!cur}).eq('id',id);await loadWorkers();}
+function handleWorkerCSV(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=async e=>{const lines=e.target.result.split('\n').map(l=>l.trim()).filter(Boolean),ws=[];for(let i=1;i<lines.length;i++){const c=lines[i].split(',').map(x=>x.replace(/"/g,'').trim());const[last,first,cb]=c;if(!last||!first)continue;ws.push({first_name:first,last_name:last,cbo_certified:(cb||'').toLowerCase()==='yes'||(cb||'').toLowerCase()==='true',active:true});}if(!ws.length){showAlert('workers-alert','No valid rows. Format: last,first,cbo(yes/no)','error');return;}const{error}=await db.from('workers').insert(ws);if(error){showAlert('workers-alert','Import error: '+error.message,'error');return;}showAlert('workers-alert',`Imported ${ws.length} workers.`,'success');await loadWorkers();};r.readAsText(file);input.value='';}
+
+function openAmbigModal(r){ambigCurrent=r;document.getElementById('ambig-desc').textContent=`"${r.rawName}" matches multiple workers:`;document.getElementById('ambig-options').innerHTML=r.ambigCandidates.map(w=>`<button class="btn btn-secondary" style="width:100%;margin-bottom:6px;text-align:left" onclick="resolveAmbig('${w.id}')">${w.last_name}, ${w.first_name} ${w.cbo_certified?'(CBO)':''} ${w.active?'':'(Inactive)'}</button>`).join('');document.getElementById('ambig-modal').classList.add('open');}
+function resolveAmbig(wid){const w=allWorkers.find(x=>x.id===wid);if(ambigCurrent&&w)Object.assign(ambigCurrent,{dbWorker:w,matchType:'exact',resolved:true,key:w.id,cboCertified:w.cbo_certified,displayName:`${w.first_name} ${w.last_name.charAt(0)}.`});closeAmbigModal();const next=rosterWorkers.find(r=>r.matchType==='ambiguous'&&!r.resolved);if(next){openAmbigModal(next);return;}runAssignment();}
+function skipAmbig(){if(ambigCurrent)ambigCurrent.resolved=true;closeAmbigModal();const next=rosterWorkers.find(r=>r.matchType==='ambiguous'&&!r.resolved);if(next){openAmbigModal(next);return;}runAssignment();}
+function closeAmbigModal(){document.getElementById('ambig-modal').classList.remove('open');}
+
+function populateHistoryWorkerSelect(){document.getElementById('hist-worker').innerHTML='<option value="">Select worker...</option>'+allWorkers.filter(w=>w.active).map(w=>`<option value="${w.id}">${w.last_name}, ${w.first_name}</option>`).join('');}
+async function loadHistoryByDate(){const d=document.getElementById('hist-date').value;if(!d)return;const{data}=await db.from('assignments').select('*,workers(first_name,last_name)').eq('assignment_date',d).order('shift').order('rotation_label');renderHistory(data||[],`Assignments for ${d}`);}
+async function loadHistoryByWorker(){const id=document.getElementById('hist-worker').value;if(!id)return;const w=allWorkers.find(x=>x.id===id);const{data}=await db.from('assignments').select('*').eq('worker_id',id).order('assignment_date',{ascending:false}).limit(60);renderHistory(data||[],`History for ${w?`${w.first_name} ${w.last_name}`:id}`);}
+function renderHistory(rows,title){
+  const out=document.getElementById('history-output');
+  if(!rows.length){out.innerHTML=`<p style="color:var(--text-dim);font-size:.78rem">${title} &mdash; no data found.</p>`;return;}
+  const byD={};for(const r of rows){const k=`${r.assignment_date}|${r.shift}`;if(!byD[k])byD[k]=[];byD[k].push(r);}
+  out.innerHTML=`<div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:14px">${title}</div>`+Object.entries(byD).map(([k,entries])=>{const[date,shift]=k.split('|');return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:10px"><div style="font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:1px;color:var(--accent);margin-bottom:8px">${date} &mdash; ${shift}</div><table style="width:100%;border-collapse:collapse;font-size:.72rem"><thead><tr>${['Rotation','Position','Worker','Role'].map(h=>`<th style="text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:.55rem;padding:4px 8px">${h}</th>`).join('')}</tr></thead><tbody>${entries.map(e=>`<tr>${[e.rotation_label,e.position_id,e.workers?`${e.workers.first_name} ${e.workers.last_name}`:'(temp)',e.role].map(v=>`<td style="padding:3px 8px;font-family:'DM Mono',monospace;font-size:.63rem;border-bottom:1px solid rgba(46,46,46,.4)">${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}).join('');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(mo=>{mo.addEventListener('click',e=>{if(e.target===mo){mo.classList.remove('open');clearSwap();}});});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));clearSwap();}});
+</script>
+</body>
+</html>
