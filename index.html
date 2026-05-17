@@ -133,6 +133,7 @@ header span{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-di
         <button class="btn btn-secondary btn-xs" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdR3KzQa_1Nsv3J5boLoEN3hLEnnsL4BiZ3OOd7erGEZCIG9w/viewform?usp=dialog','_blank')">Feedback</button>
         <button class="btn btn-secondary btn-xs" onclick="clearHistory()">Clear History</button>
         <button class="btn btn-secondary btn-xs" onclick="resetRotations()">Reset</button>
+        <button class="btn btn-secondary btn-xs" id="export-btn" onclick="exportRotation()" style="display:none">&#8595; Export This Week</button>
         <button class="btn btn-primary" onclick="generateRotations()">&#9654; Generate</button>
       </div>
     </div>
@@ -215,6 +216,7 @@ const POSITIONS=[
 
 const SPECIAL_IDS=['YGOR','FRITZ','ESCORT','REGULATORY','ELEVATOR'];
 const HISTORY_KEY='rotation_history_v3';
+let lastRotations=null;
 
 // How many turntable positions are allowed per rotation
 // Strict = 1 (preferred), Relaxed = 2 (last resort only)
@@ -1216,6 +1218,8 @@ function generateRotations(){
       return;
     }
     if(genBtn) genBtn.disabled=false;
+    lastRotations=result.rotations;
+    document.getElementById('export-btn').style.display='inline-flex';
     const newHistory=addToHistory(result.sig,result.rotations);
     renderRotations(result.rotations);
     updateStats(result.rotations,newHistory);
@@ -1365,6 +1369,29 @@ window.onload=()=>{renderSidebar([]);renderHistory();};
 <script>
 function showPatchNotes(){
   document.getElementById('patch-modal').style.display='block';
+}
+
+function exportRotation(){
+  if(!lastRotations){showAlert('Generate a rotation first.','warn');return;}
+  const d=new Date(),day=d.getDay(),sun=new Date(d);
+  sun.setDate(d.getDate()-day);
+  const weekStart=sun.toISOString().split('T')[0];
+  const json={
+    weekStart,
+    generatedAt:new Date().toISOString(),
+    rotations:lastRotations.map(rot=>({
+      label:rot.label,
+      type:rot.type,
+      cboRequired:rot.type==='rcs-rss',
+      slots:rot.slots.map(s=>({id:s.id,role:s.role,spatial:s.spatial??null}))
+    }))
+  };
+  const blob=new Blob([JSON.stringify(json,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`rotation-${weekStart}.json`;a.click();
+  URL.revokeObjectURL(url);
+  showAlert(`Exported rotation-${weekStart}.json — import this file in the Assignment tool.`,'success');
 }
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape') document.getElementById('patch-modal').style.display='none';
